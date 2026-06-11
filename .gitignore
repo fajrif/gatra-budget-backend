@@ -1,0 +1,66 @@
+# -----------------------------------
+# Go build artifacts
+# -----------------------------------
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Compiled binaries
+/app
+/app.bin
+*.test
+/bin/*
+
+# Go coverage files
+*.out
+
+# -----------------------------------
+# Go modules
+# -----------------------------------
+/vendor/
+/tmp/
+
+# -----------------------------------
+# Logs & temp data
+# -----------------------------------
+*.log
+*.pid
+*.seed
+*.bak
+*.tmp
+
+# Fiber tmp directories (if used)
+fiber.pid
+fiber.lock
+
+# -----------------------------------
+# OS / Editor files
+# -----------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# JetBrains IDE
+*.iml
+/.idea/
+/uploads/**/*
+
+# VSCode workspace
+*.code-workspace
+
+# -----------------------------------
+# Environment & secrets
+# -----------------------------------
+.env
+.env.*
+!.env.example  # keep example
+
+# ignore claude files
+.claude/
+CLAUDE.md
+TASKS.md
+.aider*

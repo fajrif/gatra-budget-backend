@@ -1,0 +1,1458 @@
+basePath: /
+definitions:
+  handlers.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  handlers.UpdateMeRequest:
+    properties:
+      full_name:
+        example: John Doe Updated
+        type: string
+      password:
+        example: newpassword123
+        type: string
+    type: object
+  models.Address:
+    properties:
+      address:
+        type: string
+      area:
+        $ref: '#/definitions/models.Area'
+      area_id:
+        type: string
+      city:
+        $ref: '#/definitions/models.City'
+      city_id:
+        type: string
+      country:
+        $ref: '#/definitions/models.Country'
+      country_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      province:
+        $ref: '#/definitions/models.Province'
+      province_id:
+        type: string
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+      user_id:
+        type: string
+      zipcode:
+        type: string
+    type: object
+  models.Area:
+    properties:
+      city:
+        $ref: '#/definitions/models.City'
+      city_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.City:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      province:
+        $ref: '#/definitions/models.Province'
+      province_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Country:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Province:
+    properties:
+      country:
+        $ref: '#/definitions/models.Country'
+      country_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      photo_url:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.UserRequest:
+    properties:
+      email:
+        example: admin@example.com
+        type: string
+      full_name:
+        example: John Doe Updated
+        type: string
+      password:
+        example: newpassword123
+        type: string
+      role:
+        example: admin
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@boilerplates.dev
+    name: API Support
+  description: REST API for the Boilerplates Go + React starter kit
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Boilerplates Backend API
+  version: "1.0"
+paths:
+  /api/areas:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all areas with optional city_id filter, search, and pagination
+      parameters:
+      - description: Filter by city ID (UUID)
+        in: query
+        name: city_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of areas with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all areas
+      tags:
+      - Areas
+    post:
+      parameters:
+      - description: Area details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Area'
+      responses:
+        "201":
+          description: Created area
+          schema:
+            $ref: '#/definitions/models.Area'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new area
+      tags:
+      - Areas
+  /api/areas/{id}:
+    delete:
+      parameters:
+      - description: Area ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Area deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Area not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an area
+      tags:
+      - Areas
+    get:
+      parameters:
+      - description: Area ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Area details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Area not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an area by ID
+      tags:
+      - Areas
+    put:
+      parameters:
+      - description: Area ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated area details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Area'
+      responses:
+        "200":
+          description: Updated area
+          schema:
+            $ref: '#/definitions/models.Area'
+        "404":
+          description: Area not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an area
+      tags:
+      - Areas
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful with token and user data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid email or password
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Authentication
+  /api/cities:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all cities with optional province_id filter, search, and
+        pagination
+      parameters:
+      - description: Filter by province ID (UUID)
+        in: query
+        name: province_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of cities with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all cities
+      tags:
+      - Cities
+    post:
+      parameters:
+      - description: City details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.City'
+      responses:
+        "201":
+          description: Created city
+          schema:
+            $ref: '#/definitions/models.City'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new city
+      tags:
+      - Cities
+  /api/cities/{id}:
+    delete:
+      parameters:
+      - description: City ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: City deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: City not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a city
+      tags:
+      - Cities
+    get:
+      parameters:
+      - description: City ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: City details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: City not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a city by ID
+      tags:
+      - Cities
+    put:
+      parameters:
+      - description: City ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated city details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.City'
+      responses:
+        "200":
+          description: Updated city
+          schema:
+            $ref: '#/definitions/models.City'
+        "404":
+          description: City not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a city
+      tags:
+      - Cities
+  /api/countries:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all countries with optional search and pagination
+      parameters:
+      - description: Search by name or code
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of countries with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all countries
+      tags:
+      - Countries
+    post:
+      consumes:
+      - application/json
+      description: Create a new country entry
+      parameters:
+      - description: Country details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Country'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created country
+          schema:
+            $ref: '#/definitions/models.Country'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new country
+      tags:
+      - Countries
+  /api/countries/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a country by ID
+      parameters:
+      - description: Country ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Country deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Country not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a country
+      tags:
+      - Countries
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single country by its UUID
+      parameters:
+      - description: Country ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Country details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Country not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a country by ID
+      tags:
+      - Countries
+    put:
+      consumes:
+      - application/json
+      description: Update an existing country by ID
+      parameters:
+      - description: Country ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated country details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Country'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated country
+          schema:
+            $ref: '#/definitions/models.Country'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Country not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a country
+      tags:
+      - Countries
+  /api/me:
+    get:
+      consumes:
+      - application/json
+      description: Get authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile data
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - User
+    put:
+      consumes:
+      - application/json
+      description: Update authenticated user's profile information (full_name and
+        password)
+      parameters:
+      - description: Update data (full_name, password)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateMeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user profile
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update current user profile
+      tags:
+      - User
+  /api/me/addresses:
+    get:
+      consumes:
+      - application/json
+      description: Get all addresses belonging to the authenticated user
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of addresses
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user's addresses
+      tags:
+      - Addresses
+    post:
+      parameters:
+      - description: Address details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Address'
+      responses:
+        "201":
+          description: Created address
+          schema:
+            $ref: '#/definitions/models.Address'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new address for the current user
+      tags:
+      - Addresses
+  /api/me/addresses/{id}:
+    delete:
+      parameters:
+      - description: Address ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Address deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an address of the current user
+      tags:
+      - Addresses
+    get:
+      parameters:
+      - description: Address ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Address details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific address of the current user
+      tags:
+      - Addresses
+    put:
+      parameters:
+      - description: Address ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated address details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Address'
+      responses:
+        "200":
+          description: Updated address
+          schema:
+            $ref: '#/definitions/models.Address'
+        "404":
+          description: Address not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an address of the current user
+      tags:
+      - Addresses
+  /api/provinces:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all provinces with optional country_id filter, search,
+        and pagination
+      parameters:
+      - description: Filter by country ID (UUID)
+        in: query
+        name: country_id
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of provinces with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all provinces
+      tags:
+      - Provinces
+    post:
+      parameters:
+      - description: Province details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Province'
+      responses:
+        "201":
+          description: Created province
+          schema:
+            $ref: '#/definitions/models.Province'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new province
+      tags:
+      - Provinces
+  /api/provinces/{id}:
+    delete:
+      parameters:
+      - description: Province ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Province deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Province not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a province
+      tags:
+      - Provinces
+    get:
+      parameters:
+      - description: Province ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Province details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Province not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a province by ID
+      tags:
+      - Provinces
+    put:
+      parameters:
+      - description: Province ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated province details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Province'
+      responses:
+        "200":
+          description: Updated province
+          schema:
+            $ref: '#/definitions/models.Province'
+        "404":
+          description: Province not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a province
+      tags:
+      - Provinces
+  /api/upload/{resource}/{field}/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete uploaded file and set database field to null
+      parameters:
+      - description: Resource name (users)
+        in: path
+        name: resource
+        required: true
+        type: string
+      - description: Field name (photo)
+        in: path
+        name: field
+        required: true
+        type: string
+      - description: Resource ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Resource or file not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete file for a resource
+      tags:
+      - Upload
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload image or file for a specific resource and field
+      parameters:
+      - description: Resource name (users)
+        in: path
+        name: resource
+        required: true
+        type: string
+      - description: Field name (photo)
+        in: path
+        name: field
+        required: true
+        type: string
+      - description: Resource ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Upload successful with file URL
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or validation error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Resource not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload file for a resource
+      tags:
+      - Upload
+  /api/users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all users with pagination and optional search filter.
+        Only accessible by admin users.
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      - description: Search by email, full name
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all users (Admin only)
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with email, password, full name, and role. Only
+        accessible by admin users.
+      parameters:
+      - description: User creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user (Admin only)
+      tags:
+      - Users
+  /api/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by their ID. Only accessible by admin users.
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user (Admin only)
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific user by their ID. Only accessible by admin
+        users.
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID (Admin only)
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Update user information including email, password, full name, and
+        role. Only accessible by admin users.
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user (Admin only)
+      tags:
+      - Users
+  /api/users/{user_id}/addresses:
+    get:
+      consumes:
+      - application/json
+      description: Get all addresses for a specific user. Only accessible by admin
+        users.
+      parameters:
+      - description: User ID (UUID)
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of addresses
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get addresses by user ID (Admin only)
+      tags:
+      - Addresses
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
