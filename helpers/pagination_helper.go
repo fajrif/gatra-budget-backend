@@ -41,7 +41,7 @@ func GetPaginationParams(c *fiber.Ctx) PaginationParams {
 
 // CreatePaginationResponse creates a standardized pagination response with total count
 // queryCount should be a separate query object using config.DB.Model(&YourModel{})
-func CreatePaginationResponse(queryCount *gorm.DB, data interface{}, key string, page int, limit int) (fiber.Map, error) {
+func CreatePaginationResponse(queryCount *gorm.DB, data any, key string, page int, limit int) (fiber.Map, error) {
 	var total int64
 
 	// Count total records (without pagination)

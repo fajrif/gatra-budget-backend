@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,9 +19,9 @@ import (
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
-// @Success 200 {object} map[string]interface{} "List of countries with pagination"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of countries with pagination"
+// @Failure 401 {object} map[string]any "Unauthorized"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/countries [get]
 func GetAllCountries(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
@@ -62,8 +62,8 @@ func GetAllCountries(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Country ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Country details"
-// @Failure 404 {object} map[string]interface{} "Country not found"
+// @Success 200 {object} map[string]any "Country details"
+// @Failure 404 {object} map[string]any "Country not found"
 // @Router /api/countries/{id} [get]
 func GetCountry(c *fiber.Ctx) error {
 	var country models.Country
@@ -82,8 +82,8 @@ func GetCountry(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body models.Country true "Country details"
 // @Success 201 {object} models.Country "Created country"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/countries [post]
 func CreateCountry(c *fiber.Ctx) error {
 	var country models.Country
@@ -109,9 +109,9 @@ func CreateCountry(c *fiber.Ctx) error {
 // @Param id path string true "Country ID (UUID)"
 // @Param request body models.Country true "Updated country details"
 // @Success 200 {object} models.Country "Updated country"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 404 {object} map[string]interface{} "Country not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 404 {object} map[string]any "Country not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/countries/{id} [put]
 func UpdateCountry(c *fiber.Ctx) error {
 	var country models.Country
@@ -135,9 +135,9 @@ func UpdateCountry(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Country ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Country deleted successfully"
-// @Failure 404 {object} map[string]interface{} "Country not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Country deleted successfully"
+// @Failure 404 {object} map[string]any "Country not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/countries/{id} [delete]
 func DeleteCountry(c *fiber.Ctx) error {
 	result := config.DB.Delete(&models.Country{}, "id = ?", c.Params("id"))

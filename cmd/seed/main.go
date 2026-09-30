@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"boilerplates-backend/config"
-	"boilerplates-backend/seeds"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/seeds"
 
 	"github.com/joho/godotenv"
 )
@@ -44,6 +44,7 @@ func runAllSeeders() {
 		fn   func() error
 	}{
 		{"address_reference", func() error { return seeds.AddressReferenceSeeder(config.DB) }},
+		{"users", func() error { return seeds.UsersSeeder(config.DB) }},
 	}
 
 	for _, seeder := range seeders {
@@ -60,8 +61,10 @@ func runSpecificSeeder(name string) {
 	switch name {
 	case "address_reference":
 		err = seeds.AddressReferenceSeeder(config.DB)
+	case "users":
+		err = seeds.UsersSeeder(config.DB)
 	default:
-		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n", name)
+		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n  - users\n", name)
 	}
 
 	if err != nil {

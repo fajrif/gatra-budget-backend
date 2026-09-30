@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 	"regexp"
 	"strings"
 	"testing"
@@ -22,9 +22,7 @@ import (
 )
 
 func TestUploadResourceField(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := fiber.New()
 	app.Post("/upload/:resource/:field/:id", handlers.UploadResourceField)
@@ -64,7 +62,7 @@ func TestUploadResourceField(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -80,7 +78,7 @@ func TestUploadResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -93,7 +91,7 @@ func TestUploadResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -106,7 +104,7 @@ func TestUploadResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -129,7 +127,7 @@ func TestUploadResourceField(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -222,9 +220,7 @@ func TestUploadResourceField(t *testing.T) {
 }
 
 func TestDeleteResourceField(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := fiber.New()
 	app.Delete("/upload/:resource/:field/:id", handlers.DeleteResourceField)
@@ -270,7 +266,7 @@ func TestDeleteResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -289,7 +285,7 @@ func TestDeleteResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -302,7 +298,7 @@ func TestDeleteResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -339,7 +335,7 @@ func TestDeleteResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -379,7 +375,7 @@ func TestDeleteResourceField(t *testing.T) {
 		// Should still succeed - DB is updated even if file doesn't exist
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -422,7 +418,7 @@ func TestDeleteResourceField(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 

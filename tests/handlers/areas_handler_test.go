@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +20,7 @@ import (
 )
 
 func TestGetAllAreas(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/areas", handlers.GetAllAreas)
@@ -38,7 +36,7 @@ func TestGetAllAreas(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["areas"])
@@ -46,9 +44,7 @@ func TestGetAllAreas(t *testing.T) {
 	})
 
 	t.Run("Successfully get single area with preload", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		cityID := uuid.New()
 		areaID := uuid.New()
@@ -70,9 +66,7 @@ func TestGetAllAreas(t *testing.T) {
 	})
 
 	t.Run("Filter by city_id", func(t *testing.T) {
-		db3, mock3, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db3)
+		mock3 := testutil.SetupMockDB(t)
 
 		cityID := uuid.New()
 
@@ -89,9 +83,7 @@ func TestGetAllAreas(t *testing.T) {
 }
 
 func TestGetArea(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/areas/:id", handlers.GetArea)
@@ -114,7 +106,7 @@ func TestGetArea(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["area"])
@@ -130,7 +122,7 @@ func TestGetArea(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Area not found", response["error"])
@@ -138,9 +130,7 @@ func TestGetArea(t *testing.T) {
 }
 
 func TestCreateArea(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Post("/areas", handlers.CreateArea)
@@ -155,7 +145,7 @@ func TestCreateArea(t *testing.T) {
 				AddRow(areaID, "Coblong", cityID, time.Now(), time.Now()))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{"name": "Coblong", "city_id": cityID.String()}
+		reqBody := map[string]any{"name": "Coblong", "city_id": cityID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/areas", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -166,7 +156,7 @@ func TestCreateArea(t *testing.T) {
 
 	t.Run("Missing name", func(t *testing.T) {
 		cityID := uuid.New()
-		reqBody := map[string]interface{}{"city_id": cityID.String()}
+		reqBody := map[string]any{"city_id": cityID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/areas", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -174,14 +164,14 @@ func TestCreateArea(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 		assert.Equal(t, "Name is required", response["error"])
 	})
 
 	t.Run("Missing city_id", func(t *testing.T) {
-		reqBody := map[string]interface{}{"name": "Coblong"}
+		reqBody := map[string]any{"name": "Coblong"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/areas", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -189,7 +179,7 @@ func TestCreateArea(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 		assert.Equal(t, "city_id is required", response["error"])
@@ -197,9 +187,7 @@ func TestCreateArea(t *testing.T) {
 }
 
 func TestDeleteArea(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Delete("/areas/:id", handlers.DeleteArea)
@@ -216,7 +204,7 @@ func TestDeleteArea(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Area deleted successfully", response["message"])

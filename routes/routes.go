@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/middleware"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/middleware"
 
 	"github.com/gofiber/fiber/v2"
 

@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 	"os"
-	"boilerplates-backend/config"
-	"boilerplates-backend/routes"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/routes"
 
-	_ "boilerplates-backend/docs"
+_ "gatra-budget-backend/docs"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -15,13 +15,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// @title Boilerplates Backend API
+// @title gatra-budget Backend API
 // @version 1.0
-// @description REST API for the Boilerplates Go + React starter kit
+// @description REST API for the gatra-budget Go + React starter kit
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
-// @contact.email support@boilerplates.dev
+// @contact.email admin@gatrahitawasana.com
 
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
@@ -76,7 +76,7 @@ func main() {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
-			"message": "Hello, boilerplates API is running 👋",
+			"message": "Hello, gatra-budget API is running 👋",
 		})
 	})
 
@@ -84,7 +84,7 @@ func main() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
 			"status":  "ok",
-			"message": "boilerplates API is running",
+			"message": "gatra-budget API is running",
 		})
 	})
 

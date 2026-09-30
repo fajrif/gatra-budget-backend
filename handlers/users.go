@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -45,9 +45,9 @@ func ValidateUserRequest(req *models.UserRequest) error {
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
 // @Param search query string false "Search by email, full name"
-// @Success 200 {object} map[string]interface{} "List of users with pagination"
-// @Failure 403 {object} map[string]interface{} "Admin access required"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of users with pagination"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/users [get]
 func GetAllUsers(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
@@ -112,10 +112,10 @@ func GetAllUsers(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "User ID (UUID)"
-// @Success 200 {object} map[string]interface{} "User details"
-// @Failure 400 {object} map[string]interface{} "Invalid user ID"
-// @Failure 403 {object} map[string]interface{} "Admin access required"
-// @Failure 404 {object} map[string]interface{} "User not found"
+// @Success 200 {object} map[string]any "User details"
+// @Failure 400 {object} map[string]any "Invalid user ID"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 404 {object} map[string]any "User not found"
 // @Router /api/users/{id} [get]
 func GetUser(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -152,11 +152,11 @@ func GetUser(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param request body models.UserRequest true "User creation details"
-// @Success 201 {object} map[string]interface{} "User created successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 403 {object} map[string]interface{} "Admin access required"
-// @Failure 409 {object} map[string]interface{} "Email already exists"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 201 {object} map[string]any "User created successfully"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 409 {object} map[string]any "Email already exists"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/users [post]
 func CreateUser(c *fiber.Ctx) error {
 	var req models.UserRequest
@@ -225,12 +225,12 @@ func CreateUser(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param id path string true "User ID (UUID)"
 // @Param request body models.UserRequest true "User update details"
-// @Success 200 {object} map[string]interface{} "Updated user details"
-// @Failure 400 {object} map[string]interface{} "Invalid request or user ID"
-// @Failure 403 {object} map[string]interface{} "Admin access required"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Failure 409 {object} map[string]interface{} "Email already exists"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Updated user details"
+// @Failure 400 {object} map[string]any "Invalid request or user ID"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 404 {object} map[string]any "User not found"
+// @Failure 409 {object} map[string]any "Email already exists"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/users/{id} [put]
 func UpdateUser(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -327,11 +327,11 @@ func UpdateUser(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "User ID (UUID)"
-// @Success 200 {object} map[string]interface{} "User deleted successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid user ID"
-// @Failure 403 {object} map[string]interface{} "Admin access required"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "User deleted successfully"
+// @Failure 400 {object} map[string]any "Invalid user ID"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 404 {object} map[string]any "User not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/users/{id} [delete]
 func DeleteUser(c *fiber.Ctx) error {
 	id := c.Params("id")

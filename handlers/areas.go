@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,8 +20,8 @@ import (
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
-// @Success 200 {object} map[string]interface{} "List of areas with pagination"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of areas with pagination"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/areas [get]
 func GetAllAreas(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
@@ -63,8 +63,8 @@ func GetAllAreas(c *fiber.Ctx) error {
 // @Tags Areas
 // @Security BearerAuth
 // @Param id path string true "Area ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Area details"
-// @Failure 404 {object} map[string]interface{} "Area not found"
+// @Success 200 {object} map[string]any "Area details"
+// @Failure 404 {object} map[string]any "Area not found"
 // @Router /api/areas/{id} [get]
 func GetArea(c *fiber.Ctx) error {
 	var area models.Area
@@ -80,8 +80,8 @@ func GetArea(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body models.Area true "Area details"
 // @Success 201 {object} models.Area "Created area"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/areas [post]
 func CreateArea(c *fiber.Ctx) error {
 	var area models.Area
@@ -107,8 +107,8 @@ func CreateArea(c *fiber.Ctx) error {
 // @Param id path string true "Area ID (UUID)"
 // @Param request body models.Area true "Updated area details"
 // @Success 200 {object} models.Area "Updated area"
-// @Failure 404 {object} map[string]interface{} "Area not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 404 {object} map[string]any "Area not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/areas/{id} [put]
 func UpdateArea(c *fiber.Ctx) error {
 	var area models.Area
@@ -129,9 +129,9 @@ func UpdateArea(c *fiber.Ctx) error {
 // @Tags Areas
 // @Security BearerAuth
 // @Param id path string true "Area ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Area deleted successfully"
-// @Failure 404 {object} map[string]interface{} "Area not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Area deleted successfully"
+// @Failure 404 {object} map[string]any "Area not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/areas/{id} [delete]
 func DeleteArea(c *fiber.Ctx) error {
 	result := config.DB.Delete(&models.Area{}, "id = ?", c.Params("id"))

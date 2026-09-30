@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"io"
 	"net/http/httptest"
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/models"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/models"
+	"gatra-budget-backend/tests/testutil"
 	"regexp"
 	"testing"
 	"time"
@@ -35,15 +35,13 @@ func setupAdminApp() *fiber.App {
 }
 
 func TestCreateUser(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Post("/users", handlers.CreateUser)
 
 	t.Run("Successfully create user", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email":     "newuser@example.com",
 			"password":  "Password123!",
 			"full_name": "New User",
@@ -70,7 +68,7 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -79,7 +77,7 @@ func TestCreateUser(t *testing.T) {
 	})
 
 	t.Run("Create user with admin role", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email":     "admin2@example.com",
 			"password":  "Password123!",
 			"full_name": "Admin User",
@@ -106,12 +104,12 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusCreated, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
 		assert.Equal(t, "User created successfully", response["message"])
-		userMap := response["user"].(map[string]interface{})
+		userMap := response["user"].(map[string]any)
 		assert.Equal(t, "admin", userMap["role"])
 	})
 
@@ -122,7 +120,7 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -130,7 +128,7 @@ func TestCreateUser(t *testing.T) {
 	})
 
 	t.Run("Missing required fields", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email": "newuser@example.com",
 		}
 
@@ -141,7 +139,7 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -149,7 +147,7 @@ func TestCreateUser(t *testing.T) {
 	})
 
 	t.Run("Email already exists", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email":     "existing@example.com",
 			"password":  "Password123!",
 			"full_name": "Existing User",
@@ -175,7 +173,7 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusConflict, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -183,7 +181,7 @@ func TestCreateUser(t *testing.T) {
 	})
 
 	t.Run("Invalid role", func(t *testing.T) {
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"email":     "newuser@example.com",
 			"password":  "Password123!",
 			"full_name": "New User",
@@ -197,7 +195,7 @@ func TestCreateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -206,9 +204,7 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestGetAllUsers(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Get("/users", handlers.GetAllUsers)
@@ -233,21 +229,19 @@ func TestGetAllUsers(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
 		assert.NotNil(t, response["users"])
 		assert.NotNil(t, response["pagination"])
 
-		users := response["users"].([]interface{})
+		users := response["users"].([]any)
 		assert.Equal(t, 2, len(users))
 	})
 
 	t.Run("Get users with pagination", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		userID := uuid.New()
 
@@ -266,20 +260,18 @@ func TestGetAllUsers(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
 		assert.NotNil(t, response["users"])
-		pagination := response["pagination"].(map[string]interface{})
+		pagination := response["pagination"].(map[string]any)
 		assert.Equal(t, float64(2), pagination["page"])
 		assert.Equal(t, float64(10), pagination["limit"])
 	})
 
 	t.Run("Search users by email", func(t *testing.T) {
-		db3, mock3, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db3)
+		mock3 := testutil.SetupMockDB(t)
 
 		userID := uuid.New()
 
@@ -300,19 +292,17 @@ func TestGetAllUsers(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
 		assert.NotNil(t, response["users"])
-		users := response["users"].([]interface{})
+		users := response["users"].([]any)
 		assert.Equal(t, 1, len(users))
 	})
 
 	t.Run("Empty list", func(t *testing.T) {
-		db4, mock4, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db4)
+		mock4 := testutil.SetupMockDB(t)
 
 		userRows := sqlmock.NewRows([]string{"id", "email", "password_hash", "full_name", "role", "created_at", "updated_at"})
 
@@ -328,7 +318,7 @@ func TestGetAllUsers(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -338,9 +328,7 @@ func TestGetAllUsers(t *testing.T) {
 }
 
 func TestGetUser(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Get("/users/:id", handlers.GetUser)
@@ -360,7 +348,7 @@ func TestGetUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -375,7 +363,7 @@ func TestGetUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -394,7 +382,7 @@ func TestGetUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -403,9 +391,7 @@ func TestGetUser(t *testing.T) {
 }
 
 func TestUpdateUser(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Put("/users/:id", handlers.UpdateUser)
@@ -427,7 +413,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 		}
 
@@ -440,7 +426,7 @@ func TestUpdateUser(t *testing.T) {
 		// fmt.Println("Response:", string(_body))
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -464,7 +450,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"password": "NewPassword123!",
 		}
 
@@ -475,7 +461,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -499,7 +485,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"role": "admin",
 		}
 
@@ -533,7 +519,7 @@ func TestUpdateUser(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"email": "new@example.com",
 		}
 
@@ -546,7 +532,7 @@ func TestUpdateUser(t *testing.T) {
 	})
 
 	t.Run("Invalid user ID format", func(t *testing.T) {
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 		}
 
@@ -557,7 +543,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -571,7 +557,7 @@ func TestUpdateUser(t *testing.T) {
 			WithArgs(userID.String()).
 			WillReturnError(gorm.ErrRecordNotFound)
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 		}
 
@@ -582,7 +568,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -609,7 +595,7 @@ func TestUpdateUser(t *testing.T) {
 			WithArgs("existing@example.com").
 			WillReturnRows(existingRows)
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"email": "existing@example.com",
 		}
 
@@ -620,7 +606,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusConflict, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -638,7 +624,7 @@ func TestUpdateUser(t *testing.T) {
 			WithArgs(userID.String()).
 			WillReturnRows(rows)
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"role": "superadmin",
 		}
 
@@ -649,7 +635,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -673,7 +659,7 @@ func TestUpdateUser(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -682,9 +668,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestDeleteUser(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Delete("/users/:id", handlers.DeleteUser)
@@ -712,7 +696,7 @@ func TestDeleteUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -725,7 +709,7 @@ func TestDeleteUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -744,7 +728,7 @@ func TestDeleteUser(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 

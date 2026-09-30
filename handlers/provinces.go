@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,8 +20,8 @@ import (
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
-// @Success 200 {object} map[string]interface{} "List of provinces with pagination"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of provinces with pagination"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/provinces [get]
 func GetAllProvinces(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
@@ -63,8 +63,8 @@ func GetAllProvinces(c *fiber.Ctx) error {
 // @Tags Provinces
 // @Security BearerAuth
 // @Param id path string true "Province ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Province details"
-// @Failure 404 {object} map[string]interface{} "Province not found"
+// @Success 200 {object} map[string]any "Province details"
+// @Failure 404 {object} map[string]any "Province not found"
 // @Router /api/provinces/{id} [get]
 func GetProvince(c *fiber.Ctx) error {
 	var province models.Province
@@ -80,8 +80,8 @@ func GetProvince(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body models.Province true "Province details"
 // @Success 201 {object} models.Province "Created province"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/provinces [post]
 func CreateProvince(c *fiber.Ctx) error {
 	var province models.Province
@@ -107,8 +107,8 @@ func CreateProvince(c *fiber.Ctx) error {
 // @Param id path string true "Province ID (UUID)"
 // @Param request body models.Province true "Updated province details"
 // @Success 200 {object} models.Province "Updated province"
-// @Failure 404 {object} map[string]interface{} "Province not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 404 {object} map[string]any "Province not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/provinces/{id} [put]
 func UpdateProvince(c *fiber.Ctx) error {
 	var province models.Province
@@ -129,9 +129,9 @@ func UpdateProvince(c *fiber.Ctx) error {
 // @Tags Provinces
 // @Security BearerAuth
 // @Param id path string true "Province ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Province deleted successfully"
-// @Failure 404 {object} map[string]interface{} "Province not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Province deleted successfully"
+// @Failure 404 {object} map[string]any "Province not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/provinces/{id} [delete]
 func DeleteProvince(c *fiber.Ctx) error {
 	result := config.DB.Delete(&models.Province{}, "id = ?", c.Params("id"))

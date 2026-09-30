@@ -1,8 +1,8 @@
 package handlers
 
 import (
-    "boilerplates-backend/config"
-    "boilerplates-backend/models"
+    "gatra-budget-backend/config"
+    "gatra-budget-backend/models"
     "os"
     "strconv"
     "time"
@@ -31,10 +31,10 @@ type Claims struct {
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Login credentials"
-// @Success 200 {object} map[string]interface{} "Login successful with token and user data"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 401 {object} map[string]interface{} "Invalid email or password"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Login successful with token and user data"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 401 {object} map[string]any "Invalid email or password"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/auth/login [post]
 func Login(c *fiber.Ctx) error {
     var req LoginRequest
@@ -102,8 +102,8 @@ func Login(c *fiber.Ctx) error {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} models.User "User profile data"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "User not found"
+// @Failure 401 {object} map[string]any "Unauthorized"
+// @Failure 404 {object} map[string]any "User not found"
 // @Router /api/me [get]
 func GetMe(c *fiber.Ctx) error {
     userID := c.Locals("userID").(string)
@@ -139,11 +139,11 @@ type UpdateMeRequest struct {
 // @Produce json
 // @Security BearerAuth
 // @Param request body UpdateMeRequest true "Update data (full_name, password)"
-// @Success 200 {object} map[string]interface{} "Updated user profile"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Updated user profile"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 401 {object} map[string]any "Unauthorized"
+// @Failure 404 {object} map[string]any "User not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/me [put]
 func UpdateMe(c *fiber.Ctx) error {
     userID := c.Locals("userID").(string)

@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 	"regexp"
 	"testing"
 	"time"
@@ -32,9 +32,7 @@ func TestLogin(t *testing.T) {
 	defer os.Unsetenv("JWT_SECRET")
 	defer os.Unsetenv("JWT_EXPIRE_HOURS")
 
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := fiber.New()
 	app.Post("/login", handlers.Login)
@@ -63,7 +61,7 @@ func TestLogin(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -96,7 +94,7 @@ func TestLogin(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -126,7 +124,7 @@ func TestLogin(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -135,9 +133,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestGetMe(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := fiber.New()
 
@@ -163,7 +159,7 @@ func TestGetMe(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -182,7 +178,7 @@ func TestGetMe(t *testing.T) {
 
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -191,9 +187,7 @@ func TestGetMe(t *testing.T) {
 }
 
 func TestUpdateMe(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := fiber.New()
 
@@ -222,7 +216,7 @@ func TestUpdateMe(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 		}
 
@@ -257,7 +251,7 @@ func TestUpdateMe(t *testing.T) {
 			WithArgs("550e8400-e29b-41d4-a716-446655440000").
 			WillReturnError(gorm.ErrRecordNotFound)
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 		}
 
@@ -286,7 +280,7 @@ func TestUpdateMe(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"password": "newpassword123",
 		}
 
@@ -297,7 +291,7 @@ func TestUpdateMe(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 
@@ -322,7 +316,7 @@ func TestUpdateMe(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		updateData := map[string]interface{}{
+		updateData := map[string]any{
 			"full_name": "Updated Name",
 			"password":  "newpassword123",
 		}
@@ -334,7 +328,7 @@ func TestUpdateMe(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 

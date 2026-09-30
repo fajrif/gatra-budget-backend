@@ -1,5 +1,5 @@
 .PHONY: help install run build test clean dev
-.PHONY: db-create db-drop db-migrate db-setup db-reset db-seed db-rollback db-status db-version db-console db-info
+.PHONY: db-create db-drop db-drop-test db-migrate db-setup db-reset db-seed db-rollback db-status db-version db-console db-info
 .PHONY: migrate migrate-status migrate-rollback migrate-create build-migrate
 .PHONY: seed seed-list seed-rebuild build-seed
 .PHONY: swagger swagger-init swagger-update
@@ -13,7 +13,7 @@ endif
 # Default target
 help:
 	@echo "=========================================="
-	@echo "  Boilerplates Backend - Makefile Commands"
+	@echo "  Gatra Budgets Backend - Makefile Commands"
 	@echo "=========================================="
 	@echo ""
 	@echo "📦 Application Commands:"
@@ -21,12 +21,15 @@ help:
 	@echo "  make run              - Run the application"
 	@echo "  make build            - Build the application binary"
 	@echo "  make dev              - Run with hot reload (requires air)"
-	@echo "  make test             - Run tests"
+	@echo "  make test             - Run all tests (unit + integration)"
+	@echo "  make test-unit        - Run unit tests only (no database needed)"
+	@echo "  make test-integration - Run integration tests only (needs PostgreSQL)"
 	@echo "  make clean            - Clean build artifacts"
 	@echo ""
 	@echo "🗄️  Database Commands (Rails-style with dash):"
 	@echo "  make db-create        - Create database"
-	@echo "  make db-drop          - Drop database (⚠ dangerous!)"
+	@echo "  make db-drop          - Drop database, also offers to drop the test DB (⚠ dangerous!)"
+	@echo "  make db-drop-test     - Drop only the test database (⚠ dangerous!)"
 	@echo "  make db-migrate       - Run pending migrations"
 	@echo "  make db-setup         - Create + migrate (first time)"
 	@echo "  make db-reset         - Drop + create + migrate (⚠ dangerous!)"
@@ -88,9 +91,31 @@ build:
 	go build -o bin/app main.go
 	@echo "✓ Binary built: bin/app"
 
+# -count=1 on the suites that read the migrations directory.
+#
+# Go's test cache keys on files the test binary has already opened. Editing an
+# existing migration therefore invalidates it, but *adding* a new one does not:
+# the binary never opened that path, so the run is served from cache and the new
+# migration is never applied. That produces a green tick against a schema that
+# is missing the change, which is the worst possible failure mode. The unit
+# tests keep their cache because source changes reliably invalidate it.
 test:
-	@echo "🧪 Running tests..."
-	go test ./tests/...
+	@echo "🧪 Running all tests (unit + integration)..."
+	go test -count=1 ./internal/... ./tests/...
+
+# Unit tests only: mocked database, no PostgreSQL required.
+test-unit:
+	@echo "🧪 Running unit tests (no database required)..."
+	go test ./internal/... ./tests/handlers/... ./tests/middleware/... ./tests/helpers/...
+
+# Integration tests: real PostgreSQL. The suite refuses to run unless the
+# target database name contains "_test", so it can never touch dev data.
+# The test database is rebuilt automatically whenever the migration files
+# change, so a new or edited migration is always tested from a clean schema.
+# Pass ARGS for extra flags, e.g. make test-integration ARGS="-v"
+test-integration:
+	@echo "🧪 Running integration tests (real PostgreSQL)..."
+	go test -count=1 ./tests/integration/... $(ARGS)
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
@@ -117,6 +142,12 @@ db-create:
 db-drop:
 	@chmod +x db.sh
 	@./db.sh drop
+
+# Drop only the test database (TEST_DB_NAME, default DB_NAME_test).
+# It is recreated automatically on the next `make test-integration`.
+db-drop-test:
+	@chmod +x db.sh
+	@./db.sh drop:test
 
 db-migrate:
 	@chmod +x db.sh
@@ -199,7 +230,7 @@ seed-rebuild:
 build-migrate:
 	@echo "🔨 Building migration tool..."
 	mkdir -p bin
-	go build -o bin/migrate migrate.go
+	go build -o bin/migrate ./cmd/migrate
 	@echo "✓ Migration tool built: bin/migrate"
 
 build-seed:

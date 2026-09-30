@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +20,7 @@ import (
 )
 
 func TestGetAllProvinces(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/provinces", handlers.GetAllProvinces)
@@ -47,16 +45,14 @@ func TestGetAllProvinces(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["provinces"])
 	})
 
 	t.Run("Filter by country_id", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		countryID := uuid.New()
 		provinceID := uuid.New()
@@ -80,9 +76,7 @@ func TestGetAllProvinces(t *testing.T) {
 }
 
 func TestGetProvince(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/provinces/:id", handlers.GetProvince)
@@ -106,7 +100,7 @@ func TestGetProvince(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["province"])
@@ -122,7 +116,7 @@ func TestGetProvince(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Province not found", response["error"])
@@ -130,9 +124,7 @@ func TestGetProvince(t *testing.T) {
 }
 
 func TestCreateProvince(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Post("/provinces", handlers.CreateProvince)
@@ -147,7 +139,7 @@ func TestCreateProvince(t *testing.T) {
 				AddRow(provinceID, "DKI Jakarta", countryID, time.Now(), time.Now()))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{"name": "DKI Jakarta", "country_id": countryID.String()}
+		reqBody := map[string]any{"name": "DKI Jakarta", "country_id": countryID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/provinces", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -158,7 +150,7 @@ func TestCreateProvince(t *testing.T) {
 
 	t.Run("Missing name", func(t *testing.T) {
 		countryID := uuid.New()
-		reqBody := map[string]interface{}{"country_id": countryID.String()}
+		reqBody := map[string]any{"country_id": countryID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/provinces", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -166,14 +158,14 @@ func TestCreateProvince(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 		assert.Equal(t, "Name is required", response["error"])
 	})
 
 	t.Run("Missing country_id", func(t *testing.T) {
-		reqBody := map[string]interface{}{"name": "DKI Jakarta"}
+		reqBody := map[string]any{"name": "DKI Jakarta"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/provinces", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -181,7 +173,7 @@ func TestCreateProvince(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 		assert.Equal(t, "country_id is required", response["error"])
@@ -189,9 +181,7 @@ func TestCreateProvince(t *testing.T) {
 }
 
 func TestDeleteProvince(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Delete("/provinces/:id", handlers.DeleteProvince)
@@ -208,7 +198,7 @@ func TestDeleteProvince(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Province deleted successfully", response["message"])

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v2"
@@ -31,9 +31,7 @@ func setupApp() *fiber.App {
 }
 
 func TestGetAllCountries(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/countries", handlers.GetAllCountries)
@@ -52,20 +50,18 @@ func TestGetAllCountries(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 
 		assert.NotNil(t, response["countries"])
 		assert.NotNil(t, response["pagination"])
-		countries := response["countries"].([]interface{})
+		countries := response["countries"].([]any)
 		assert.Equal(t, 2, len(countries))
 	})
 
 	t.Run("Get all without pagination using all=true", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		rows := sqlmock.NewRows([]string{"id", "name", "code", "created_at", "updated_at"}).
 			AddRow(uuid.New(), "Indonesia", "ID", time.Now(), time.Now())
@@ -82,9 +78,7 @@ func TestGetAllCountries(t *testing.T) {
 }
 
 func TestGetCountry(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/countries/:id", handlers.GetCountry)
@@ -102,7 +96,7 @@ func TestGetCountry(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["country"])
@@ -118,7 +112,7 @@ func TestGetCountry(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Country not found", response["error"])
@@ -126,9 +120,7 @@ func TestGetCountry(t *testing.T) {
 }
 
 func TestCreateCountry(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Post("/countries", handlers.CreateCountry)
@@ -141,7 +133,7 @@ func TestCreateCountry(t *testing.T) {
 				AddRow(countryID, "Malaysia", "MY", time.Now(), time.Now()))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{"name": "Malaysia", "code": "MY"}
+		reqBody := map[string]any{"name": "Malaysia", "code": "MY"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/countries", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -151,7 +143,7 @@ func TestCreateCountry(t *testing.T) {
 	})
 
 	t.Run("Missing required fields", func(t *testing.T) {
-		reqBody := map[string]interface{}{"name": "Malaysia"}
+		reqBody := map[string]any{"name": "Malaysia"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/countries", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -159,7 +151,7 @@ func TestCreateCountry(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		respBody, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(respBody, &response)
 		assert.Equal(t, "Name and code are required", response["error"])
@@ -175,9 +167,7 @@ func TestCreateCountry(t *testing.T) {
 }
 
 func TestUpdateCountry(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Put("/countries/:id", handlers.UpdateCountry)
@@ -196,7 +186,7 @@ func TestUpdateCountry(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{"name": "Republic of Indonesia", "code": "ID"}
+		reqBody := map[string]any{"name": "Republic of Indonesia", "code": "ID"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("PUT", "/countries/"+countryID.String(), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -211,7 +201,7 @@ func TestUpdateCountry(t *testing.T) {
 			WithArgs(countryID.String()).
 			WillReturnError(gorm.ErrRecordNotFound)
 
-		reqBody := map[string]interface{}{"name": "Indonesia", "code": "ID"}
+		reqBody := map[string]any{"name": "Indonesia", "code": "ID"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("PUT", "/countries/"+countryID.String(), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -222,9 +212,7 @@ func TestUpdateCountry(t *testing.T) {
 }
 
 func TestDeleteCountry(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Delete("/countries/:id", handlers.DeleteCountry)
@@ -241,7 +229,7 @@ func TestDeleteCountry(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Country deleted successfully", response["message"])

@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"os"
-	"boilerplates-backend/middleware"
+	"gatra-budget-backend/middleware"
 	"testing"
 	"time"
 

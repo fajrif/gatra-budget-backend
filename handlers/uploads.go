@@ -2,17 +2,23 @@ package handlers
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
-	"boilerplates-backend/config"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
+
+func isValidField(validFields []string, field string) bool {
+	return slices.Contains(validFields, field)
+}
 
 // UploadResourceField godoc
 // @Summary Upload file for a resource
@@ -25,35 +31,30 @@ import (
 // @Param field path string true "Field name (photo)"
 // @Param id path string true "Resource ID (UUID)"
 // @Param file formData file true "File to upload"
-// @Success 200 {object} map[string]interface{} "Upload successful with file URL"
-// @Failure 400 {object} map[string]interface{} "Invalid request or validation error"
-// @Failure 404 {object} map[string]interface{} "Resource not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Upload successful with file URL"
+// @Failure 400 {object} map[string]any "Invalid request or validation error"
+// @Failure 404 {object} map[string]any "Resource not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/upload/{resource}/{field}/{id} [post]
 func UploadResourceField(c *fiber.Ctx) error {
 	resource := c.Params("resource")
 	field := c.Params("field")
 	id := c.Params("id")
 
-	validCombinations := map[string][]string{
+	var validCombinations = map[string][]string{
 		"users": {"photo"},
 	}
+
+	var validResourceNames = strings.Join(slices.Sorted(maps.Keys(validCombinations)), ", ")
 
 	validFields, resourceExists := validCombinations[resource]
 	if !resourceExists {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid resource. Valid resources: users",
+			"error": "Invalid resource. Valid resources: " + validResourceNames,
 		})
 	}
 
-	fieldValid := false
-	for _, vf := range validFields {
-		if vf == field {
-			fieldValid = true
-			break
-		}
-	}
-	if !fieldValid {
+	if !isValidField(validFields, field) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": fmt.Sprintf("Invalid field '%s' for resource '%s'. Valid fields: %s", field, resource, strings.Join(validFields, ", ")),
 		})
@@ -97,7 +98,7 @@ func UploadResourceField(c *fiber.Ctx) error {
 
 	fileURL := "/" + strings.ReplaceAll(filePath, "\\", "/")
 
-	if err := updateResourceFileURL(resource, field, id, fileURL); err != nil {
+	if err := updateResourceFileURL(resource, id, fileURL); err != nil {
 		os.Remove(filePath)
 		if err.Error() == "resource not found" {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -118,7 +119,12 @@ func UploadResourceField(c *fiber.Ctx) error {
 	})
 }
 
-func updateResourceFileURL(resource, field, id, fileURL string) error {
+// updateResourceFileURL stores the file path on the given resource.
+//
+// The "field" path segment is a public API name, not a column name: the URL is
+// /upload/users/photo/:id while the column is users.photo_url. Each resource
+// therefore resolves its own column, mirroring getResourceFileURL.
+func updateResourceFileURL(resource, id, fileURL string) error {
 	switch resource {
 	case "users":
 		var user models.User
@@ -141,35 +147,30 @@ func updateResourceFileURL(resource, field, id, fileURL string) error {
 // @Param resource path string true "Resource name (users)"
 // @Param field path string true "Field name (photo)"
 // @Param id path string true "Resource ID (UUID)"
-// @Success 200 {object} map[string]interface{} "File deleted successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid request or validation error"
-// @Failure 404 {object} map[string]interface{} "Resource or file not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "File deleted successfully"
+// @Failure 400 {object} map[string]any "Invalid request or validation error"
+// @Failure 404 {object} map[string]any "Resource or file not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/upload/{resource}/{field}/{id} [delete]
 func DeleteResourceField(c *fiber.Ctx) error {
 	resource := c.Params("resource")
 	field := c.Params("field")
 	id := c.Params("id")
 
-	validCombinations := map[string][]string{
+	var validCombinations = map[string][]string{
 		"users": {"photo"},
 	}
+
+	var validResourceNames = strings.Join(slices.Sorted(maps.Keys(validCombinations)), ", ")
 
 	validFields, resourceExists := validCombinations[resource]
 	if !resourceExists {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid resource. Valid resources: users",
+			"error": "Invalid resource. Valid resources: " + validResourceNames,
 		})
 	}
 
-	fieldValid := false
-	for _, vf := range validFields {
-		if vf == field {
-			fieldValid = true
-			break
-		}
-	}
-	if !fieldValid {
+	if !isValidField(validFields, field) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": fmt.Sprintf("Invalid field '%s' for resource '%s'. Valid fields: %s", field, resource, strings.Join(validFields, ", ")),
 		})
@@ -198,7 +199,7 @@ func DeleteResourceField(c *fiber.Ctx) error {
 		fmt.Printf("Warning: Failed to delete file %s: %v\n", filePath, err)
 	}
 
-	if err := updateResourceFileURL(resource, field, id, ""); err != nil {
+	if err := updateResourceFileURL(resource, id, ""); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update database",
 		})

@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -18,9 +18,9 @@ import (
 // @Security BearerAuth
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
-// @Success 200 {object} map[string]interface{} "List of addresses"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of addresses"
+// @Failure 401 {object} map[string]any "Unauthorized"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/me/addresses [get]
 func GetMyAddresses(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
@@ -37,9 +37,9 @@ func GetMyAddresses(c *fiber.Ctx) error {
 // @Param user_id path string true "User ID (UUID)"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
-// @Success 200 {object} map[string]interface{} "List of addresses"
-// @Failure 404 {object} map[string]interface{} "User not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of addresses"
+// @Failure 404 {object} map[string]any "User not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/users/{user_id}/addresses [get]
 func GetUserAddresses(c *fiber.Ctx) error {
 	userID := c.Params("user_id")
@@ -74,8 +74,8 @@ func getAddressesByUser(c *fiber.Ctx, userID string) error {
 // @Tags Addresses
 // @Security BearerAuth
 // @Param id path string true "Address ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Address details"
-// @Failure 404 {object} map[string]interface{} "Address not found"
+// @Success 200 {object} map[string]any "Address details"
+// @Failure 404 {object} map[string]any "Address not found"
 // @Router /api/me/addresses/{id} [get]
 func GetMyAddress(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
@@ -93,8 +93,8 @@ func GetMyAddress(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body models.Address true "Address details"
 // @Success 201 {object} models.Address "Created address"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/me/addresses [post]
 func CreateMyAddress(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
@@ -126,8 +126,8 @@ func CreateMyAddress(c *fiber.Ctx) error {
 // @Param id path string true "Address ID (UUID)"
 // @Param request body models.Address true "Updated address details"
 // @Success 200 {object} models.Address "Updated address"
-// @Failure 404 {object} map[string]interface{} "Address not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 404 {object} map[string]any "Address not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/me/addresses/{id} [put]
 func UpdateMyAddress(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)
@@ -150,9 +150,9 @@ func UpdateMyAddress(c *fiber.Ctx) error {
 // @Tags Addresses
 // @Security BearerAuth
 // @Param id path string true "Address ID (UUID)"
-// @Success 200 {object} map[string]interface{} "Address deleted successfully"
-// @Failure 404 {object} map[string]interface{} "Address not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "Address deleted successfully"
+// @Failure 404 {object} map[string]any "Address not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/me/addresses/{id} [delete]
 func DeleteMyAddress(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(string)

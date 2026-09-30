@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"boilerplates-backend/config"
-	"boilerplates-backend/helpers"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/config"
+	"gatra-budget-backend/helpers"
+	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,8 +20,8 @@ import (
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
-// @Success 200 {object} map[string]interface{} "List of cities with pagination"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "List of cities with pagination"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/cities [get]
 func GetAllCities(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
@@ -63,8 +63,8 @@ func GetAllCities(c *fiber.Ctx) error {
 // @Tags Cities
 // @Security BearerAuth
 // @Param id path string true "City ID (UUID)"
-// @Success 200 {object} map[string]interface{} "City details"
-// @Failure 404 {object} map[string]interface{} "City not found"
+// @Success 200 {object} map[string]any "City details"
+// @Failure 404 {object} map[string]any "City not found"
 // @Router /api/cities/{id} [get]
 func GetCity(c *fiber.Ctx) error {
 	var city models.City
@@ -80,8 +80,8 @@ func GetCity(c *fiber.Ctx) error {
 // @Security BearerAuth
 // @Param request body models.City true "City details"
 // @Success 201 {object} models.City "Created city"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/cities [post]
 func CreateCity(c *fiber.Ctx) error {
 	var city models.City
@@ -107,8 +107,8 @@ func CreateCity(c *fiber.Ctx) error {
 // @Param id path string true "City ID (UUID)"
 // @Param request body models.City true "Updated city details"
 // @Success 200 {object} models.City "Updated city"
-// @Failure 404 {object} map[string]interface{} "City not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Failure 404 {object} map[string]any "City not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/cities/{id} [put]
 func UpdateCity(c *fiber.Ctx) error {
 	var city models.City
@@ -129,9 +129,9 @@ func UpdateCity(c *fiber.Ctx) error {
 // @Tags Cities
 // @Security BearerAuth
 // @Param id path string true "City ID (UUID)"
-// @Success 200 {object} map[string]interface{} "City deleted successfully"
-// @Failure 404 {object} map[string]interface{} "City not found"
-// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Success 200 {object} map[string]any "City deleted successfully"
+// @Failure 404 {object} map[string]any "City not found"
+// @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/cities/{id} [delete]
 func DeleteCity(c *fiber.Ctx) error {
 	result := config.DB.Delete(&models.City{}, "id = ?", c.Params("id"))

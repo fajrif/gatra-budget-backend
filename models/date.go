@@ -43,7 +43,7 @@ func (d Date) MarshalJSON() ([]byte, error) {
 }
 
 // Scan implements sql.Scanner interface
-func (d *Date) Scan(value interface{}) error {
+func (d *Date) Scan(value any) error {
 	if value == nil {
 		d.Time = time.Time{}
 		return nil

@@ -6,7 +6,7 @@
 -- You may need to disconnect from the current database first
 -- or run this from a different database like 'postgres'
 
--- CREATE DATABASE boilerplates_db
+-- CREATE DATABASE gatra_budget_db
     -- WITH
     -- OWNER = deployer
     -- ENCODING = 'UTF8'
@@ -16,7 +16,7 @@
     -- CONNECTION LIMIT = -1;
 
 -- Grant all privileges to deployer
--- GRANT ALL PRIVILEGES ON DATABASE boilerplates_db TO deployer;
+-- GRANT ALL PRIVILEGES ON DATABASE gatra_budget_db TO deployer;
 
 -- Optional: Create deployer user if not exists
 -- Uncomment if needed

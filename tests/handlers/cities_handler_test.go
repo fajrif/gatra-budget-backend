@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v2"
@@ -20,9 +20,7 @@ import (
 )
 
 func TestGetAllCities(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/cities", handlers.GetAllCities)
@@ -51,16 +49,14 @@ func TestGetAllCities(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["cities"])
 	})
 
 	t.Run("Filter by province_id", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		provinceID := uuid.New()
 		countryID := uuid.New()
@@ -88,9 +84,7 @@ func TestGetAllCities(t *testing.T) {
 }
 
 func TestGetCity(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Get("/cities/:id", handlers.GetCity)
@@ -118,7 +112,7 @@ func TestGetCity(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["city"])
@@ -134,7 +128,7 @@ func TestGetCity(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "City not found", response["error"])
@@ -142,9 +136,7 @@ func TestGetCity(t *testing.T) {
 }
 
 func TestCreateCity(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Post("/cities", handlers.CreateCity)
@@ -159,7 +151,7 @@ func TestCreateCity(t *testing.T) {
 				AddRow(cityID, "Kota Bandung", provinceID, time.Now(), time.Now()))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{"name": "Kota Bandung", "province_id": provinceID.String()}
+		reqBody := map[string]any{"name": "Kota Bandung", "province_id": provinceID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/cities", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -170,7 +162,7 @@ func TestCreateCity(t *testing.T) {
 
 	t.Run("Missing name", func(t *testing.T) {
 		provinceID := uuid.New()
-		reqBody := map[string]interface{}{"province_id": provinceID.String()}
+		reqBody := map[string]any{"province_id": provinceID.String()}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/cities", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -180,7 +172,7 @@ func TestCreateCity(t *testing.T) {
 	})
 
 	t.Run("Missing province_id", func(t *testing.T) {
-		reqBody := map[string]interface{}{"name": "Kota Bandung"}
+		reqBody := map[string]any{"name": "Kota Bandung"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("POST", "/cities", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -191,9 +183,7 @@ func TestCreateCity(t *testing.T) {
 }
 
 func TestDeleteCity(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupApp()
 	app.Delete("/cities/:id", handlers.DeleteCity)
@@ -210,7 +200,7 @@ func TestDeleteCity(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "City deleted successfully", response["message"])

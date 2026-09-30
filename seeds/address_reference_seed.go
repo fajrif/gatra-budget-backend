@@ -2,7 +2,7 @@ package seeds
 
 import (
 	"fmt"
-	"boilerplates-backend/models"
+	"gatra-budget-backend/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

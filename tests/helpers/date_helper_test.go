@@ -1,7 +1,7 @@
 package helpers_test
 
 import (
-	"boilerplates-backend/helpers"
+	"gatra-budget-backend/helpers"
 	"testing"
 	"time"
 

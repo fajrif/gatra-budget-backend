@@ -1,8 +1,9 @@
 package testutil
 
 import (
-	"database/sql"
-	"boilerplates-backend/config"
+	"testing"
+
+	"gatra-budget-backend/config"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/postgres"
@@ -13,30 +14,47 @@ func StringPtr(s string) *string {
 	return &s
 }
 
-// SetupMockDB creates a mock database connection for testing
-func SetupMockDB() (*sql.DB, sqlmock.Sqlmock, error) {
+// SetupMockDB installs a sqlmock-backed GORM connection as the global
+// config.DB and returns the mock for setting expectations.
+//
+// The mock is closed and any unmet expectations are reported automatically
+// when the test (or subtest) that called this function finishes, so there is
+// no need to defer anything. Passing the *testing.T also scopes the cleanup to
+// that test, which keeps nested subtests isolated from each other.
+func SetupMockDB(t *testing.T) sqlmock.Sqlmock {
+	t.Helper()
+
 	db, mock, err := sqlmock.New()
 	if err != nil {
-		return nil, nil, err
+		t.Fatalf("failed to create sqlmock: %v", err)
 	}
 
-	dialector := postgres.New(postgres.Config{
+	gormDB, err := gorm.Open(postgres.New(postgres.Config{
 		Conn:       db,
 		DriverName: "postgres",
-	})
-
-	gormDB, err := gorm.Open(dialector, &gorm.Config{})
+	}), &gorm.Config{})
 	if err != nil {
-		return nil, nil, err
+		db.Close()
+		t.Fatalf("failed to open gorm with sqlmock: %v", err)
 	}
 
-	// Set the global DB instance for testing
+	previousDB := config.DB
 	config.DB = gormDB
 
-	return db, mock, nil
-}
+	t.Cleanup(func() {
+		config.DB = previousDB
 
-// CloseMockDB closes the mock database connection
-func CloseMockDB(db *sql.DB) {
-	db.Close()
+		// Report before closing: closing can discard pending expectations.
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("unmet database expectations: %v", err)
+		}
+
+		// sqlmock treats Close as just another expected call.
+		mock.ExpectClose()
+		if err := db.Close(); err != nil {
+			t.Errorf("failed to close sqlmock: %v", err)
+		}
+	})
+
+	return mock
 }

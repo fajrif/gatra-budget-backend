@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"boilerplates-backend/handlers"
-	"boilerplates-backend/tests/testutil"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v2"
@@ -41,9 +41,7 @@ func addrCols() *sqlmock.Rows {
 }
 
 func TestGetMyAddresses(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupUserApp()
 	app.Get("/me/addresses", handlers.GetMyAddresses)
@@ -57,7 +55,7 @@ func TestGetMyAddresses(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.NotNil(t, response["addresses"])
@@ -65,9 +63,7 @@ func TestGetMyAddresses(t *testing.T) {
 	})
 
 	t.Run("Returns 200 with pagination params", func(t *testing.T) {
-		db2, mock2, err := testutil.SetupMockDB()
-		assert.NoError(t, err)
-		defer testutil.CloseMockDB(db2)
+		mock2 := testutil.SetupMockDB(t)
 
 		mock2.ExpectQuery(`SELECT \* FROM "addresses"`).WillReturnRows(addrCols())
 		countRows := sqlmock.NewRows([]string{"count"}).AddRow(5)
@@ -77,19 +73,17 @@ func TestGetMyAddresses(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
-		pagination := response["pagination"].(map[string]interface{})
+		pagination := response["pagination"].(map[string]any)
 		assert.Equal(t, float64(1), pagination["page"])
 		assert.Equal(t, float64(10), pagination["limit"])
 	})
 }
 
 func TestGetMyAddress(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupUserApp()
 	app.Get("/me/addresses/:id", handlers.GetMyAddress)
@@ -104,7 +98,7 @@ func TestGetMyAddress(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusNotFound, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Address not found", response["error"])
@@ -112,9 +106,7 @@ func TestGetMyAddress(t *testing.T) {
 }
 
 func TestCreateMyAddress(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupUserApp()
 	app.Post("/me/addresses", handlers.CreateMyAddress)
@@ -133,7 +125,7 @@ func TestCreateMyAddress(t *testing.T) {
 					time.Now(), time.Now()))
 		mock.ExpectCommit()
 
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":        "Home",
 			"address":     "Jl. Sudirman No. 1",
 			"country_id":  countryID.String(),
@@ -153,7 +145,7 @@ func TestCreateMyAddress(t *testing.T) {
 		countryID := uuid.New()
 		provinceID := uuid.New()
 		cityID := uuid.New()
-		reqBody := map[string]interface{}{
+		reqBody := map[string]any{
 			"name":        "Home",
 			"country_id":  countryID.String(),
 			"province_id": provinceID.String(),
@@ -177,9 +169,7 @@ func TestCreateMyAddress(t *testing.T) {
 }
 
 func TestUpdateMyAddress(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupUserApp()
 	app.Put("/me/addresses/:id", handlers.UpdateMyAddress)
@@ -190,7 +180,7 @@ func TestUpdateMyAddress(t *testing.T) {
 			WithArgs(addrID.String(), testUserID).
 			WillReturnError(gorm.ErrRecordNotFound)
 
-		reqBody := map[string]interface{}{"name": "Office"}
+		reqBody := map[string]any{"name": "Office"}
 		body, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest("PUT", "/me/addresses/"+addrID.String(), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -201,9 +191,7 @@ func TestUpdateMyAddress(t *testing.T) {
 }
 
 func TestDeleteMyAddress(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupUserApp()
 	app.Delete("/me/addresses/:id", handlers.DeleteMyAddress)
@@ -220,7 +208,7 @@ func TestDeleteMyAddress(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Address deleted successfully", response["message"])
@@ -241,9 +229,7 @@ func TestDeleteMyAddress(t *testing.T) {
 }
 
 func TestGetUserAddresses(t *testing.T) {
-	db, mock, err := testutil.SetupMockDB()
-	assert.NoError(t, err)
-	defer testutil.CloseMockDB(db)
+	mock := testutil.SetupMockDB(t)
 
 	app := setupAdminApp()
 	app.Get("/users/:user_id/addresses", handlers.GetUserAddresses)
@@ -265,7 +251,7 @@ func TestGetUserAddresses(t *testing.T) {
 		resp, _ := app.Test(req)
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
-		var response map[string]interface{}
+		var response map[string]any
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &response)
 		assert.Equal(t, "Invalid user ID", response["error"])

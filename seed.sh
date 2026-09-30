@@ -13,24 +13,21 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Load .env file if exists
-if [ -f .env ]; then
-  echo -e "${BLUE}Loading configuration from .env file...${NC}"
-  export $(grep -v '^#' .env | xargs)
-fi
+# Shared helpers (safe .env loading, staleness-aware builds)
+# shellcheck source=scripts/common.sh
+. "$(dirname "$0")/scripts/common.sh"
+
+load_env_file
 
 # Configuration
 SEED_BINARY="./bin/seed"
 GO_FILE="./cmd/seed/main.go"
 
-# Check if seed binary exists, build if not
+# Build the seed tool unless the existing binary is already up to date
 check_seed_binary() {
-  if [ ! -f "$SEED_BINARY" ]; then
-    echo -e "${YELLOW}Seed tool not found. Building...${NC}"
-    mkdir -p bin
-    go build -o "$SEED_BINARY" "$GO_FILE"
-    echo -e "${GREEN}✓ Seed tool built${NC}"
-  fi
+  build_if_stale "$SEED_BINARY" "$GO_FILE" || exit 1
+  [ "$BUILD_REBUILT" = "1" ] && echo -e "${GREEN}✓ Seed tool built${NC}"
+  return 0
 }
 
 # Show usage
@@ -50,10 +47,12 @@ show_usage() {
   echo ""
   echo -e "${GREEN}Available Seeders:${NC}"
   echo "  address_reference    Seed countries, provinces, cities, areas"
+  echo "  users                Seed the default admin and user accounts"
   echo ""
   echo -e "${BLUE}Examples:${NC}"
   echo "  $0 all                             Run all seeders"
   echo "  $0 address_reference               Run address_reference seeder only"
+  echo "  $0 users                           Run users seeder only"
   echo "  $0 list                            List available seeders"
   echo ""
   echo -e "${YELLOW}Environment Variables:${NC}"
@@ -61,7 +60,7 @@ show_usage() {
   echo "  DB_PORT         Database port (default: 5432)"
   echo "  DB_USER         Database user (default: deployer)"
   echo "  DB_PASSWORD     Database password"
-  echo "  DB_NAME         Database name (default: boilerplates_db)"
+  echo "  DB_NAME         Database name (default: gatra_budget_db)"
   echo ""
 }
 
@@ -89,6 +88,7 @@ list_seeders() {
   echo -e "${CYAN}==========================================${NC}"
   echo ""
   echo -e "${GREEN}▶ address_reference${NC} - Seed countries, provinces, cities, and areas"
+  echo -e "${GREEN}▶ users${NC} - Seed the default admin and user accounts"
   echo ""
   echo -e "${YELLOW}To add more seeders:${NC}"
   echo "  1. Create a new file in seeds/ directory"

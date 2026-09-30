@@ -13,19 +13,23 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Load .env file if exists
-if [ -f .env ]; then
-    echo -e "${BLUE}Loading configuration from .env file...${NC}"
-    export $(grep -v '^#' .env | xargs)
-fi
+# Shared helpers (safe .env loading, staleness-aware builds)
+# shellcheck source=scripts/common.sh
+. "$(dirname "$0")/scripts/common.sh"
+
+load_env_file
 
 # Configuration from environment or defaults
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 DB_USER="${DB_USER:-deployer}"
 DB_PASSWORD="${DB_PASSWORD:-}"
-DB_NAME="${DB_NAME:-merk_buku_db}"
+DB_NAME="${DB_NAME:-gatra_budget_db}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
+
+# Test database. Derived the same way the integration suite derives it, so the
+# two never disagree about which database tests run against.
+TEST_DB_NAME="${TEST_DB_NAME:-${DB_NAME}_test}"
 
 MIGRATIONS_DIR="./migrations"
 MIGRATE_BINARY="./bin/migrate"
@@ -91,9 +95,15 @@ check_postgres() {
     fi
 }
 
+# Check if a specific database exists
+db_name_exists() {
+    local name="$1"
+    psql -U "$POSTGRES_USER" -d postgres -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$name"
+}
+
 # Check if database exists
 db_exists() {
-    psql -U "$POSTGRES_USER" -d postgres -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$DB_NAME"
+    db_name_exists "$DB_NAME"
 }
 
 # Check if user exists
@@ -101,14 +111,11 @@ user_exists() {
     psql -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" 2>/dev/null | grep -q 1
 }
 
-# Ensure migration binary exists
+# Ensure the migration binary is present and current
 ensure_migrate_binary() {
-    if [ ! -f "$MIGRATE_BINARY" ]; then
-        print_info "Building migration tool..."
-        mkdir -p bin
-        go build -o "$MIGRATE_BINARY" migrate.go
-        print_success "Migration tool built"
-    fi
+    build_if_stale "$MIGRATE_BINARY" ./cmd/migrate || return 1
+    [ "$BUILD_REBUILT" = "1" ] && print_success "Migration tool built"
+    return 0
 }
 
 # Create database user if not exists
@@ -124,6 +131,77 @@ create_user() {
         psql -U "$POSTGRES_USER" -d postgres -c "ALTER USER $DB_USER CREATEDB;" 2>/dev/null || true
         print_success "User '$DB_USER' created"
     fi
+}
+
+# Drop a database by exact name: terminate open connections, then drop it.
+# Uses dropdb first because that behaves best on macOS, with a psql fallback.
+drop_database() {
+    local name="$1"
+
+    # -q -t silences the result set; only the script's own messages are useful.
+    psql -q -t -U "$POSTGRES_USER" -d postgres -c "
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = '$name' AND pid <> pg_backend_pid();
+    " 2>/dev/null >/dev/null || true
+
+    if dropdb -U "$POSTGRES_USER" "$name" 2>/dev/null; then
+        return 0
+    fi
+
+    if psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $name;" 2>/dev/null; then
+        return 0
+    fi
+
+    return 1
+}
+
+# A test database is only droppable when it is clearly a test database and is
+# not the development database. The "_test" check mirrors the guard in the Go
+# integration suite, so a mistyped TEST_DB_NAME can never delete real data.
+test_db_is_droppable() {
+    [ -n "$TEST_DB_NAME" ] || return 1
+    [ "$TEST_DB_NAME" != "$DB_NAME" ] || return 1
+    case "$TEST_DB_NAME" in
+        *_test*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Offer to drop the test database alongside the development one.
+# Defaults to keeping it, and never fails the caller's operation.
+maybe_drop_test_db() {
+    if ! test_db_is_droppable; then
+        print_warning "Not touching test database '$TEST_DB_NAME': not a recognisable test database (or it is the same as DB_NAME)"
+        return 0
+    fi
+
+    if ! db_name_exists "$TEST_DB_NAME"; then
+        print_info "Test database '$TEST_DB_NAME' does not exist"
+        return 0
+    fi
+
+    echo ""
+    print_warning "This will also permanently delete test database '$TEST_DB_NAME'"
+
+    local reply
+    # EOF (non-interactive run) must be treated as "no".
+    read -r -p "Drop it too? [y/N] " reply || reply=""
+    echo ""
+
+    if [[ ! "$reply" =~ ^[Yy]$ ]]; then
+        print_info "Test database kept"
+        return 0
+    fi
+
+    print_info "Dropping test database '$TEST_DB_NAME'..."
+    if drop_database "$TEST_DB_NAME"; then
+        print_success "Test database '$TEST_DB_NAME' dropped successfully"
+        print_info "It is recreated automatically on the next 'make test-integration'"
+    else
+        print_warning "Failed to drop test database '$TEST_DB_NAME' (not fatal)"
+    fi
+    return 0
 }
 
 # Create database
@@ -177,11 +255,12 @@ db_drop() {
     
     if ! db_exists; then
         print_warning "Database '$DB_NAME' does not exist"
+        maybe_drop_test_db
         return 0
     fi
     
     print_warning "This will permanently delete database '$DB_NAME'"
-    read -p "Are you sure? Type 'yes' to confirm: " response
+    read -p "Are you sure? Type 'yes' to confirm: " response || response=""
     
     if [ "$response" != "yes" ]; then
         print_info "Drop cancelled"
@@ -190,27 +269,14 @@ db_drop() {
     
     print_info "Dropping database '$DB_NAME'..."
     
-    # Terminate connections
-    psql -U "$POSTGRES_USER" -d postgres -c "
-        SELECT pg_terminate_backend(pid) 
-        FROM pg_stat_activity 
-        WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();
-    " 2>/dev/null || true
-    
-    # Drop database using dropdb command (works best on macOS)
-    if dropdb -U "$POSTGRES_USER" "$DB_NAME" 2>/dev/null; then
-        print_success "Database '$DB_NAME' dropped successfully"
-        return 0
+    if ! drop_database "$DB_NAME"; then
+        print_error "Failed to drop database"
+        exit 1
     fi
+    print_success "Database '$DB_NAME' dropped successfully"
     
-    # Fallback to psql
-    if psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>/dev/null; then
-        print_success "Database '$DB_NAME' dropped successfully"
-        return 0
-    fi
-    
-    print_error "Failed to drop database"
-    exit 1
+    maybe_drop_test_db
+    return 0
 }
 
 # Run migrations
@@ -262,7 +328,7 @@ db_rollback() {
     ensure_migrate_binary
     
     print_warning "This will rollback the last migration"
-    read -p "Are you sure? [y/N] " -n 1 -r
+    read -r -p "Are you sure? [y/N] " -n 1 -r || REPLY=""
     echo ""
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -285,7 +351,7 @@ db_reset() {
     print_warning "ALL DATA WILL BE LOST!"
     echo ""
     
-    read -p "Type 'yes' to confirm: " response
+    read -p "Type 'yes' to confirm: " response || response=""
     
     if [ "$response" != "yes" ]; then
         print_info "Reset cancelled"
@@ -295,20 +361,9 @@ db_reset() {
     # Drop
     if db_exists; then
         print_info "Step 1/3: Dropping database..."
-        # Terminate connections
-        psql -U "$POSTGRES_USER" -d postgres -c "
-            SELECT pg_terminate_backend(pid) 
-            FROM pg_stat_activity 
-            WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();
-        " 2>/dev/null || true
-        
-        # Drop using dropdb command
-        if ! dropdb -U "$POSTGRES_USER" "$DB_NAME" 2>/dev/null; then
-            # Fallback to psql
-            psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>/dev/null || {
-                print_error "Failed to drop database"
-                exit 1
-            }
+        if ! drop_database "$DB_NAME"; then
+            print_error "Failed to drop database"
+            exit 1
         fi
         print_success "Database dropped"
     fi
@@ -335,7 +390,46 @@ db_reset() {
     print_success "Migrations completed"
     
     echo ""
+    maybe_drop_test_db
+    
+    echo ""
     print_success "Database reset completed successfully! 🎉"
+}
+
+# Drop only the test database
+db_drop_test() {
+    print_header "Dropping Test Database"
+    
+    check_postgres || exit 1
+    
+    if ! test_db_is_droppable; then
+        print_error "Refusing to drop '$TEST_DB_NAME': it is not a recognisable test database, or it is the same as DB_NAME"
+        print_info "Set TEST_DB_NAME to a database whose name contains '_test'"
+        exit 1
+    fi
+    
+    if ! db_name_exists "$TEST_DB_NAME"; then
+        print_warning "Test database '$TEST_DB_NAME' does not exist"
+        return 0
+    fi
+    
+    print_warning "This will permanently delete test database '$TEST_DB_NAME'"
+    read -p "Are you sure? Type 'yes' to confirm: " response || response=""
+    
+    if [ "$response" != "yes" ]; then
+        print_info "Drop cancelled"
+        return 1
+    fi
+    
+    print_info "Dropping test database '$TEST_DB_NAME'..."
+    if ! drop_database "$TEST_DB_NAME"; then
+        print_error "Failed to drop test database"
+        exit 1
+    fi
+    
+    print_success "Test database '$TEST_DB_NAME' dropped successfully"
+    print_info "It is recreated automatically on the next 'make test-integration'"
+    return 0
 }
 
 # Setup database (create + migrate)
@@ -424,6 +518,7 @@ db_info() {
     echo "  Port:     $DB_PORT"
     echo "  User:     $DB_USER"
     echo "  Database: $DB_NAME"
+    echo "  Test DB:  $TEST_DB_NAME"
     echo ""
     
     if check_postgres; then
@@ -452,6 +547,12 @@ db_info() {
         else
             echo -e "  ${YELLOW}⚠ Database does not exist${NC}"
         fi
+
+        if test_db_is_droppable && db_name_exists "$TEST_DB_NAME"; then
+            echo -e "  ${GREEN}✓ Test database exists${NC} (${TEST_DB_NAME})"
+        else
+            echo -e "  ${YELLOW}⚠ Test database does not exist${NC} (${TEST_DB_NAME})"
+        fi
     fi
 }
 
@@ -467,6 +568,8 @@ show_usage() {
     echo -e "${GREEN}Main Commands:${NC}"
     echo "  create          Create database"
     echo "  drop            Drop database (⚠ dangerous!)"
+    echo "                  also offers to drop the test database"
+    echo "  drop:test       Drop only the test database"
     echo "  migrate         Run pending migrations"
     echo "  setup           Create database + run migrations"
     echo "  reset           Drop + create + migrate (⚠ dangerous!)"
@@ -483,6 +586,7 @@ show_usage() {
     echo -e "${GREEN}Rails-style Shortcuts:${NC}"
     echo "  db:create       Same as 'create'"
     echo "  db:drop         Same as 'drop'"
+    echo "  db:drop:test    Same as 'drop:test'"
     echo "  db:migrate      Same as 'migrate'"
     echo "  db:reset        Same as 'reset'"
     echo "  db:setup        Same as 'setup'"
@@ -503,7 +607,8 @@ show_usage() {
     echo "  DB_PORT         Database port (default: 5432)"
     echo "  DB_USER         Database user (default: deployer)"
     echo "  DB_PASSWORD     Database password"
-    echo "  DB_NAME         Database name (default: merk_buku_db)"
+    echo "  DB_NAME         Database name (default: gatra_budget_db)"
+    echo "  TEST_DB_NAME    Test database (default: DB_NAME + '_test')"
     echo "  POSTGRES_USER   Postgres superuser (default: postgres)"
     echo ""
 }
@@ -516,6 +621,10 @@ case "${1:-help}" in
     
     drop|db:drop)
         db_drop
+        ;;
+    
+    drop:test|db:drop:test)
+        db_drop_test
         ;;
     
     migrate|db:migrate)
