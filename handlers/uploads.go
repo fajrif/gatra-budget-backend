@@ -42,7 +42,8 @@ func UploadResourceField(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var validCombinations = map[string][]string{
-		"users": {"photo"},
+		"users":        {"photo"},
+		"transactions": {"bukti_transaksi"},
 	}
 
 	var validResourceNames = strings.Join(slices.Sorted(maps.Keys(validCombinations)), ", ")
@@ -67,10 +68,14 @@ func UploadResourceField(c *fiber.Ctx) error {
 		})
 	}
 
+	allowedExtensions := map[string][]string{
+		"users/photo":                  {".jpg", ".jpeg", ".png"},
+		"transactions/bukti_transaksi": {".jpg", ".jpeg", ".png", ".webp", ".pdf"},
+	}
 	fileExt := strings.ToLower(filepath.Ext(file.Filename))
-	if fileExt != ".jpg" && fileExt != ".jpeg" && fileExt != ".png" {
+	if !slices.Contains(allowedExtensions[resource+"/"+field], fileExt) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid file type. Only JPEG and PNG images are allowed",
+			"error": "Invalid file type for " + resource + "/" + field + ". Allowed: " + strings.Join(allowedExtensions[resource+"/"+field], ", "),
 		})
 	}
 	if file.Size > 5*1024*1024 {
@@ -132,6 +137,12 @@ func updateResourceFileURL(resource, id, fileURL string) error {
 			return fmt.Errorf("resource not found")
 		}
 		return config.DB.Model(&user).Update("photo_url", fileURL).Error
+	case "transactions":
+		var transaction models.Transaction
+		if err := config.DB.Where("id = ?", id).First(&transaction).Error; err != nil {
+			return fmt.Errorf("resource not found")
+		}
+		return config.DB.Model(&transaction).Update("bukti_transaksi_url", fileURL).Error
 	default:
 		return fmt.Errorf("invalid resource")
 	}
@@ -158,7 +169,8 @@ func DeleteResourceField(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var validCombinations = map[string][]string{
-		"users": {"photo"},
+		"users":        {"photo"},
+		"transactions": {"bukti_transaksi"},
 	}
 
 	var validResourceNames = strings.Join(slices.Sorted(maps.Keys(validCombinations)), ", ")
@@ -221,6 +233,12 @@ func getResourceFileURL(resource, id string) (*string, error) {
 			return nil, fmt.Errorf("resource not found")
 		}
 		return user.PhotoUrl, nil
+	case "transactions":
+		var transaction models.Transaction
+		if err := config.DB.Where("id = ?", id).First(&transaction).Error; err != nil {
+			return nil, fmt.Errorf("resource not found")
+		}
+		return transaction.BuktiTransaksiURL, nil
 	default:
 		return nil, fmt.Errorf("invalid resource")
 	}

@@ -3,13 +3,13 @@ package handlers_test
 import (
 	"bytes"
 	"encoding/json"
+	"gatra-budget-backend/handlers"
+	"gatra-budget-backend/tests/testutil"
 	"io"
 	"mime/multipart"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"gatra-budget-backend/handlers"
-	"gatra-budget-backend/tests/testutil"
 	"regexp"
 	"strings"
 	"testing"
@@ -70,6 +70,61 @@ func TestUploadResourceField(t *testing.T) {
 		assert.NotEmpty(t, response["file_url"])
 		assert.Equal(t, "users", response["resource"])
 		assert.Equal(t, "photo", response["field"])
+	})
+
+	t.Run("Successfully upload transaction bukti_transaksi as PDF", func(t *testing.T) {
+		transactionID := uuid.New()
+
+		rows := sqlmock.NewRows([]string{"id", "project_id", "cost_type_id", "tanggal_transaksi", "jumlah_realisasi", "created_at", "updated_at"}).
+			AddRow(transactionID, uuid.New(), uuid.New(), "2024-03-15", 500_000.0, time.Now(), time.Now())
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "transactions" WHERE id = $1`)).
+			WithArgs(transactionID.String()).
+			WillReturnRows(rows)
+
+		mock.ExpectBegin()
+		mock.ExpectExec(regexp.QuoteMeta(`UPDATE "transactions" SET`)).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, _ := writer.CreateFormFile("file", "bukti.pdf")
+		part.Write([]byte("fake pdf content"))
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "/upload/transactions/bukti_transaksi/"+transactionID.String(), body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		resp, _ := app.Test(req)
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode, string(respBody))
+
+		var response map[string]any
+		json.Unmarshal(respBody, &response)
+		assert.Equal(t, "transactions", response["resource"])
+		assert.Equal(t, "bukti_transaksi", response["field"])
+	})
+
+	t.Run("Disallowed file type for transaction bukti_transaksi", func(t *testing.T) {
+		transactionID := uuid.New()
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, _ := writer.CreateFormFile("file", "bukti.txt")
+		part.Write([]byte("fake content"))
+		writer.Close()
+
+		req := httptest.NewRequest("POST", "/upload/transactions/bukti_transaksi/"+transactionID.String(), body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		resp, _ := app.Test(req)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+		var response map[string]any
+		respBody, _ := io.ReadAll(resp.Body)
+		json.Unmarshal(respBody, &response)
+		assert.Contains(t, response["error"], "Invalid file type")
 	})
 
 	t.Run("Invalid resource", func(t *testing.T) {

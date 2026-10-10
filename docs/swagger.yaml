@@ -68,6 +68,54 @@ definitions:
       updated_at:
         type: string
     type: object
+  models.BudgetItem:
+    properties:
+      bulan_ke:
+        type: integer
+      cost_type:
+        $ref: '#/definitions/models.CostType'
+      cost_type_id:
+        type: string
+      created_at:
+        type: string
+      deskripsi_anggaran:
+        type: string
+      id:
+        type: string
+      is_parent:
+        type: boolean
+      jenis_biaya_name:
+        type: string
+      jumlah_anggaran:
+        type: number
+      kategori_anggaran:
+        type: string
+      parent_budget_id:
+        type: string
+      periode_bulan:
+        type: string
+      project:
+        $ref: '#/definitions/models.Project'
+      project_id:
+        type: string
+      total_anggaran:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  models.BudgetItemRequest:
+    properties:
+      cost_type_id:
+        type: string
+      deskripsi_anggaran:
+        type: string
+      kategori_anggaran:
+        type: string
+      project_id:
+        type: string
+      total_anggaran:
+        type: number
+    type: object
   models.City:
     properties:
       created_at:
@@ -79,6 +127,53 @@ definitions:
       province:
         $ref: '#/definitions/models.Province'
       province_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.Client:
+    properties:
+      address:
+        type: string
+      contact_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ContractType:
+    properties:
+      code:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.CostType:
+    properties:
+      created_at:
+        type: string
+      deskripsi:
+        type: string
+      id:
+        type: string
+      kode:
+        type: string
+      nama_biaya:
         type: string
       updated_at:
         type: string
@@ -96,6 +191,83 @@ definitions:
       updated_at:
         type: string
     type: object
+  models.Date:
+    properties:
+      time.Time:
+        type: string
+    type: object
+  models.Project:
+    properties:
+      client:
+        $ref: '#/definitions/models.Client'
+      client_id:
+        type: string
+      contract_type:
+        $ref: '#/definitions/models.ContractType'
+      contract_type_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: string
+      jangka_waktu:
+        type: integer
+      judul_pekerjaan:
+        type: string
+      management_fee:
+        type: number
+      nilai_pekerjaan:
+        type: number
+      no_amandemen:
+        type: string
+      no_perjanjian:
+        type: string
+      no_sp2k:
+        type: string
+      status_kontrak:
+        type: string
+      tanggal_mulai:
+        $ref: '#/definitions/models.Date'
+      tanggal_perjanjian:
+        $ref: '#/definitions/models.Date'
+      tanggal_selesai:
+        $ref: '#/definitions/models.Date'
+      tarif_management_fee_persen:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  models.ProjectRequest:
+    properties:
+      client_id:
+        type: string
+      contract_type_id:
+        type: string
+      judul_pekerjaan:
+        type: string
+      management_fee:
+        type: number
+      nilai_pekerjaan:
+        type: number
+      no_amandemen:
+        type: string
+      no_perjanjian:
+        type: string
+      no_sp2k:
+        type: string
+      status_kontrak:
+        type: string
+      tanggal_mulai:
+        type: string
+      tanggal_perjanjian:
+        type: string
+      tanggal_selesai:
+        type: string
+      tarif_management_fee_persen:
+        type: number
+    type: object
   models.Province:
     properties:
       country:
@@ -109,6 +281,60 @@ definitions:
       name:
         type: string
       updated_at:
+        type: string
+    type: object
+  models.Transaction:
+    properties:
+      bukti_transaksi_url:
+        type: string
+      bulan_realisasi:
+        type: string
+      cost_type:
+        $ref: '#/definitions/models.CostType'
+      cost_type_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deskripsi_realisasi:
+        type: string
+      id:
+        type: string
+      jumlah_realisasi:
+        type: number
+      jumlah_tenaga_kerja:
+        type: integer
+      nilai_management_fee:
+        type: number
+      persentase_management_fee:
+        type: number
+      project:
+        $ref: '#/definitions/models.Project'
+      project_id:
+        type: string
+      tanggal_po_tagihan:
+        $ref: '#/definitions/models.Date'
+      tanggal_transaksi:
+        $ref: '#/definitions/models.Date'
+      updated_at:
+        type: string
+    type: object
+  models.TransactionRequest:
+    properties:
+      cost_type_id:
+        type: string
+      deskripsi_realisasi:
+        type: string
+      jumlah_realisasi:
+        type: number
+      jumlah_tenaga_kerja:
+        type: integer
+      project_id:
+        type: string
+      tanggal_po_tagihan:
+        type: string
+      tanggal_transaksi:
         type: string
     type: object
   models.User:
@@ -146,14 +372,14 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: support@boilerplates.dev
+    email: admin@gatrahitawasana.com
     name: API Support
-  description: REST API for the Boilerplates Go + React starter kit
+  description: REST API for the gatra-budget Go + React starter kit
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: Boilerplates Backend API
+  title: gatra-budget Backend API
   version: "1.0"
 paths:
   /api/areas:
@@ -351,6 +577,185 @@ paths:
       summary: User login
       tags:
       - Authentication
+  /api/budget-items:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve budget items, optionally filtered by project or parent
+      parameters:
+      - description: Filter by project ID (UUID)
+        in: query
+        name: project_id
+        type: string
+      - description: Filter by parent budget item ID (UUID)
+        in: query
+        name: parent_budget_id
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of budget items with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all budget items
+      tags:
+      - BudgetItems
+    post:
+      description: Creates a parent budget item; "monthly" items also create evenly-split
+        monthly children
+      parameters:
+      - description: Budget item details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.BudgetItemRequest'
+      responses:
+        "201":
+          description: Created budget item
+          schema:
+            $ref: '#/definitions/models.BudgetItem'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project or cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new budget item
+      tags:
+      - BudgetItems
+  /api/budget-items/{id}:
+    delete:
+      description: Deletes a budget item. Deleting a parent cascades to its monthly
+        children.
+      parameters:
+      - description: Budget item ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Budget item deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Budget item not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a budget item
+      tags:
+      - BudgetItems
+    get:
+      parameters:
+      - description: Budget item ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Budget item details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Budget item not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a budget item by ID
+      tags:
+      - BudgetItems
+    put:
+      description: 'Updates a parent budget item. Monthly items are re-synced: children
+        are destroyed and rebuilt against the new total. Non-parent rows are updated
+        directly.'
+      parameters:
+      - description: Budget item ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated budget item details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.BudgetItemRequest'
+      responses:
+        "200":
+          description: Updated budget item
+          schema:
+            $ref: '#/definitions/models.BudgetItem'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Budget item not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a budget item
+      tags:
+      - BudgetItems
   /api/cities:
     get:
       consumes:
@@ -509,6 +914,480 @@ paths:
       summary: Update a city
       tags:
       - Cities
+  /api/clients:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all clients with optional search and pagination
+      parameters:
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of clients with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all clients
+      tags:
+      - Clients
+    post:
+      parameters:
+      - description: Client details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Client'
+      responses:
+        "201":
+          description: Created client
+          schema:
+            $ref: '#/definitions/models.Client'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new client
+      tags:
+      - Clients
+  /api/clients/{id}:
+    delete:
+      parameters:
+      - description: Client ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Client deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Client not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a client
+      tags:
+      - Clients
+    get:
+      parameters:
+      - description: Client ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Client details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Client not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a client by ID
+      tags:
+      - Clients
+    put:
+      parameters:
+      - description: Client ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated client details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Client'
+      responses:
+        "200":
+          description: Updated client
+          schema:
+            $ref: '#/definitions/models.Client'
+        "404":
+          description: Client not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a client
+      tags:
+      - Clients
+  /api/contract-types:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all contract types with optional search and pagination
+      parameters:
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of contract types with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all contract types
+      tags:
+      - ContractTypes
+    post:
+      parameters:
+      - description: Contract type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ContractType'
+      responses:
+        "201":
+          description: Created contract type
+          schema:
+            $ref: '#/definitions/models.ContractType'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new contract type
+      tags:
+      - ContractTypes
+  /api/contract-types/{id}:
+    delete:
+      parameters:
+      - description: Contract type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Contract type deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Contract type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a contract type
+      tags:
+      - ContractTypes
+    get:
+      parameters:
+      - description: Contract type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Contract type details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Contract type not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a contract type by ID
+      tags:
+      - ContractTypes
+    put:
+      parameters:
+      - description: Contract type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated contract type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ContractType'
+      responses:
+        "200":
+          description: Updated contract type
+          schema:
+            $ref: '#/definitions/models.ContractType'
+        "404":
+          description: Contract type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a contract type
+      tags:
+      - ContractTypes
+  /api/cost-types:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all cost types with optional search and pagination
+      parameters:
+      - description: Search by nama_biaya
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of cost types with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all cost types
+      tags:
+      - CostTypes
+    post:
+      parameters:
+      - description: Cost type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CostType'
+      responses:
+        "201":
+          description: Created cost type
+          schema:
+            $ref: '#/definitions/models.CostType'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new cost type
+      tags:
+      - CostTypes
+  /api/cost-types/{id}:
+    delete:
+      parameters:
+      - description: Cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Cost type deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a cost type
+      tags:
+      - CostTypes
+    get:
+      parameters:
+      - description: Cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Cost type details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a cost type by ID
+      tags:
+      - CostTypes
+    put:
+      parameters:
+      - description: Cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated cost type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CostType'
+      responses:
+        "200":
+          description: Updated cost type
+          schema:
+            $ref: '#/definitions/models.CostType'
+        "404":
+          description: Cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a cost type
+      tags:
+      - CostTypes
   /api/countries:
     get:
       consumes:
@@ -914,6 +1793,215 @@ paths:
       summary: Update an address of the current user
       tags:
       - Addresses
+  /api/projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all projects with optional status filter, search, and
+        pagination
+      parameters:
+      - description: Filter by status (Active, Pending, Non Aktif)
+        in: query
+        name: status_kontrak
+        type: string
+      - description: Search by no_sp2k or judul_pekerjaan
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of projects with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all projects
+      tags:
+      - Projects
+    post:
+      parameters:
+      - description: Project details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProjectRequest'
+      responses:
+        "201":
+          description: Created project
+          schema:
+            $ref: '#/definitions/models.Project'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new project
+      tags:
+      - Projects
+  /api/projects/{id}:
+    delete:
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Project deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a project
+      tags:
+      - Projects
+    get:
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Project details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a project by ID
+      tags:
+      - Projects
+    put:
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated project details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProjectRequest'
+      responses:
+        "200":
+          description: Updated project
+          schema:
+            $ref: '#/definitions/models.Project'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a project
+      tags:
+      - Projects
+  /api/projects/{id}/budget-trend:
+    get:
+      description: Non-sensitive per-month allocated (budget item children) vs realized
+        (transactions) totals
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Monthly budget trend
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a project's monthly budget-vs-actual trend
+      tags:
+      - Projects
+  /api/projects/{id}/sla-breakdown:
+    get:
+      description: Non-sensitive count of this project's transactions by SLA status
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: SLA breakdown
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a project's payment SLA breakdown
+      tags:
+      - Projects
   /api/provinces:
     get:
       consumes:
@@ -1072,6 +2160,276 @@ paths:
       summary: Update a province
       tags:
       - Provinces
+  /api/reports/management-fee:
+    get:
+      description: Realized spend and management fee per project per month, with grand
+        totals. Computed server-side only; the client renders this as-is.
+      responses:
+        "200":
+          description: Rows by project and month, plus totals
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get the management fee breakdown by project and month (admin only)
+      tags:
+      - Reports
+  /api/reports/projects-summary:
+    get:
+      description: Per-project contract value, realized total, remaining budget, absorption
+        (alert at 80%), and management-fee-style profit margin
+      parameters:
+      - description: Filter by status (Active, Pending, Non Aktif)
+        in: query
+        name: status_kontrak
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: Project summaries with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get remaining budget and profit margin for every project (admin only)
+      tags:
+      - Reports
+  /api/reports/projects/{id}/summary:
+    get:
+      parameters:
+      - description: Project ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Project summary
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get remaining budget and profit margin for one project (admin only)
+      tags:
+      - Reports
+  /api/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve transactions, optionally filtered by project or cost type,
+        with pagination
+      parameters:
+      - description: Filter by project ID (UUID)
+        in: query
+        name: project_id
+        type: string
+      - description: Filter by cost type ID (UUID)
+        in: query
+        name: cost_type_id
+        type: string
+      - description: Search by deskripsi_realisasi
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of transactions with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all transactions
+      tags:
+      - Transactions
+    post:
+      description: Creates a transaction; bulan_realisasi and the management-fee fields
+        are computed server-side from the project's fee rate
+      parameters:
+      - description: Transaction details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransactionRequest'
+      responses:
+        "201":
+          description: Created transaction
+          schema:
+            $ref: '#/definitions/models.Transaction'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project or cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new transaction
+      tags:
+      - Transactions
+  /api/transactions/{id}:
+    delete:
+      parameters:
+      - description: Transaction ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Transaction deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a transaction
+      tags:
+      - Transactions
+    get:
+      parameters:
+      - description: Transaction ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Transaction details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a transaction by ID
+      tags:
+      - Transactions
+    put:
+      parameters:
+      - description: Transaction ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated transaction details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TransactionRequest'
+      responses:
+        "200":
+          description: Updated transaction
+          schema:
+            $ref: '#/definitions/models.Transaction'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Transaction not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a transaction
+      tags:
+      - Transactions
   /api/upload/{resource}/{field}/{id}:
     delete:
       consumes:
