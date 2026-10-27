@@ -14,6 +14,8 @@ COPY . .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/migrate ./cmd/migrate
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/seed ./cmd/seed 2>/dev/null || true
 
 # Final stage
 FROM alpine:latest
@@ -24,6 +26,9 @@ RUN apk --no-cache add ca-certificates tzdata
 
 # Copy binary from builder
 COPY --from=builder /app/main .
+
+# Copy migrate/seed binaries if present
+COPY --from=builder /app/bin ./bin
 
 # Copy migrations and other necessary files
 COPY --from=builder /app/migrations ./migrations
