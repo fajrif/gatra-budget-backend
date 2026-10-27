@@ -30,6 +30,10 @@ COPY --from=builder /app/main .
 # Copy migrate/seed binaries if present
 COPY --from=builder /app/bin ./bin
 
+# Copy seed script
+COPY --from=builder /app/seed.sh ./seed.sh
+RUN chmod +x ./seed.sh ./bin/* 2>/dev/null || true
+
 # Copy migrations and other necessary files
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/docs ./docs
