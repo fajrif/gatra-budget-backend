@@ -17,7 +17,7 @@ import (
 // admin-only.
 var reportPaths = []string{
 	"/api/reports/projects-summary",
-	"/api/reports/management-fee",
+	"/api/reports/monthly",
 }
 
 // authedGet performs a GET with a Bearer token against the real middleware.
@@ -68,7 +68,7 @@ func TestReportRoutesAdminOnlyOverRealJWT(t *testing.T) {
 	}
 
 	t.Run("project summary is forbidden for non-admin", func(t *testing.T) {
-		project, _ := newBudgetItemTestProject(t, tx)
+		project, _ := newTestProject(t, tx)
 		resp := authedGet(t, a, "/api/reports/projects/"+project.ID.String()+"/summary", userToken)
 		if resp.StatusCode != http.StatusForbidden {
 			t.Fatalf("expected 403 for non-admin, got %d: %s", resp.StatusCode, readRawBody(t, resp))
@@ -76,7 +76,7 @@ func TestReportRoutesAdminOnlyOverRealJWT(t *testing.T) {
 	})
 
 	t.Run("plain project payload never carries remaining budget or margin", func(t *testing.T) {
-		project, _ := newBudgetItemTestProject(t, tx)
+		project, _ := newTestProject(t, tx)
 		resp := authedGet(t, a, "/api/projects/"+project.ID.String(), userToken)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200 for GET project, got %d: %s", resp.StatusCode, readRawBody(t, resp))
@@ -92,33 +92,28 @@ func TestReportRoutesAdminOnlyOverRealJWT(t *testing.T) {
 }
 
 // TestReportTotalsAgainstRealDB checks the arithmetic against real Postgres
-// aggregation: SUM by project, the 80% absorption threshold, and the
-// management fee computed from the full project total.
+// aggregation: SUM by project, the 80% absorption threshold, profit margin as
+// the sum of invoice fees, and the monthly report's per-source grouping.
 func TestReportTotalsAgainstRealDB(t *testing.T) {
 	tx := withTx(t)
 	newTestUser(t, tx, "reports-totals@gatrahitawasana.com", "admin")
 
-	project, costType := newBudgetItemTestProject(t, tx)
-	if err := tx.Model(&project).Updates(map[string]any{
-		"nilai_pekerjaan":             1_000_000_000,
-		"tarif_management_fee_persen": 10,
-	}).Error; err != nil {
-		t.Fatalf("failed to set contract value and fee rate: %v", err)
-	}
+	project, costType := newTestProject(t, tx)
+	// newTestProject sets nilai_pekerjaan to 1,000,000,000.
 
-	jan, feb := "2024-01", "2024-02"
 	for _, row := range []struct {
 		month  string
 		amount float64
 	}{
-		{jan, 400_000_000},
-		{feb, 450_000_000},
+		{"2026-01", 400_000_000},
+		{"2026-02", 450_000_000},
 	} {
+		month := row.month
 		transaction := models.Transaction{
 			ProjectID:        project.ID,
 			CostTypeID:       costType.ID,
-			TanggalTransaksi: models.Date{Time: mustParseDate(t, row.month+"-15")},
-			BulanRealisasi:   &row.month,
+			TanggalTransaksi: models.Date{Time: mustParseDate(t, month+"-15")},
+			BulanRealisasi:   &month,
 			JumlahRealisasi:  row.amount,
 		}
 		if err := tx.Create(&transaction).Error; err != nil {
@@ -126,11 +121,24 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 		}
 	}
 
+	bayar := models.Date{Time: mustParseDate(t, "2026-02-20")}
+	for _, inv := range []models.Invoice{
+		{NoInvoice: "INV-R-1", NamaInvoice: "Termin 1", TglTagihan: models.Date{Time: mustParseDate(t, "2026-01-10")},
+			TglBayar: &bayar, Status: models.InvoiceStatusClearing, Nilai: 500_000_000, ManajemenFee: 40_000_000},
+		{NoInvoice: "INV-R-2", NamaInvoice: "Termin 2", TglTagihan: models.Date{Time: mustParseDate(t, "2026-02-10")},
+			Status: models.InvoiceStatusSubmit, Nilai: 300_000_000, ManajemenFee: 20_000_000},
+	} {
+		inv.ProjectID = project.ID
+		if err := tx.Create(&inv).Error; err != nil {
+			t.Fatalf("failed to create invoice: %v", err)
+		}
+	}
+
 	a := app()
 	routes.Setup(a)
 	token := loginAndGetToken(t, a, "reports-totals@gatrahitawasana.com")
 
-	t.Run("project summary: remaining budget, absorption alert, margin", func(t *testing.T) {
+	t.Run("project summary: remaining budget, absorption alert, margin from invoice fees", func(t *testing.T) {
 		resp := authedGet(t, a, "/api/reports/projects/"+project.ID.String()+"/summary", token)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", resp.StatusCode, readRawBody(t, resp))
@@ -143,30 +151,39 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 		if summary["absorption_alert"] != true {
 			t.Fatalf("expected absorption_alert at 85%%, got %v", summary["absorption_alert"])
 		}
-		assertFloat(t, summary, "profit_margin", 85_000_000)
+		assertFloat(t, summary, "total_invoice", 800_000_000)
+		assertFloat(t, summary, "total_clearing", 500_000_000)
+		assertFloat(t, summary, "total_outstanding", 300_000_000)
+		assertFloat(t, summary, "profit_margin", 60_000_000)
 	})
 
-	t.Run("management fee report: per-month rows and project-level total", func(t *testing.T) {
-		resp := authedGet(t, a, "/api/reports/management-fee", token)
+	t.Run("monthly report groups each source by its own month", func(t *testing.T) {
+		resp := authedGet(t, a, "/api/reports/monthly?year=2026&project_id="+project.ID.String(), token)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", resp.StatusCode, readRawBody(t, resp))
 		}
 
 		body := readBody(t, resp)
 		rows := body["rows"].([]any)
+		if len(rows) != 12 {
+			t.Fatalf("expected 12 monthly rows, got %d", len(rows))
+		}
 
-		var ours []map[string]any
-		for _, r := range rows {
-			row := r.(map[string]any)
-			if row["project_id"] == project.ID.String() {
-				ours = append(ours, row)
-			}
-		}
-		if len(ours) != 2 {
-			t.Fatalf("expected 2 monthly rows for this project, got %d", len(ours))
-		}
-		assertFloat(t, ours[0], "management_fee", 40_000_000) // 10% of Jan 400M
-		assertFloat(t, ours[1], "management_fee", 45_000_000) // 10% of Feb 450M
+		jan := rows[0].(map[string]any)
+		assertFloat(t, jan, "pengeluaran", 400_000_000)
+		assertFloat(t, jan, "tagihan", 500_000_000)
+		assertFloat(t, jan, "penerimaan", 0) // billed in January, paid in February
+
+		feb := rows[1].(map[string]any)
+		assertFloat(t, feb, "pengeluaran", 450_000_000)
+		assertFloat(t, feb, "tagihan", 300_000_000)
+		assertFloat(t, feb, "penerimaan", 500_000_000)
+		assertFloat(t, feb, "manajemen_fee", 40_000_000) // only the Clearing invoice's fee
+		assertFloat(t, feb, "selisih", 50_000_000)
+
+		totals := body["totals"].(map[string]any)
+		assertFloat(t, totals, "pengeluaran", 850_000_000)
+		assertFloat(t, totals, "penerimaan", 500_000_000)
 	})
 }
 

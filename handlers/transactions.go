@@ -25,31 +25,12 @@ func ValidateTransactionRequest(req *models.TransactionRequest) error {
 	return nil
 }
 
-// TransactionResponse wraps a Transaction with its SLA status, which is
-// computed on read (not persisted) — matches the verified Rails model method.
-type TransactionResponse struct {
-	models.Transaction
-	SLAStatus string `json:"sla_status"`
-}
-
-func toTransactionResponse(t models.Transaction) TransactionResponse {
-	return TransactionResponse{
-		Transaction: t,
-		SLAStatus:   helpers.TransactionSLAStatus(t.TanggalTransaksi, t.TanggalPOTagihan),
-	}
-}
-
 // applyTransactionRequest copies a validated TransactionRequest onto a
-// Transaction, parsing dates and recomputing bulan_realisasi and the
-// management-fee fields server-side from the project's fee rate.
+// Transaction, parsing the date and recomputing bulan_realisasi server-side.
 func applyTransactionRequest(t *models.Transaction, req *models.TransactionRequest, project *models.Project) error {
 	tanggalTransaksi, err := helpers.ParseDateString(&req.TanggalTransaksi)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid tanggal_transaksi: "+err.Error())
-	}
-	tanggalPOTagihan, err := helpers.ParseDateString(req.TanggalPOTagihan)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid tanggal_po_tagihan: "+err.Error())
 	}
 
 	t.ProjectID = project.ID
@@ -59,18 +40,9 @@ func applyTransactionRequest(t *models.Transaction, req *models.TransactionReque
 	t.JumlahTenagaKerja = req.JumlahTenagaKerja
 
 	t.TanggalTransaksi = models.Date{Time: *tanggalTransaksi}
-	if tanggalPOTagihan != nil {
-		t.TanggalPOTagihan = &models.Date{Time: *tanggalPOTagihan}
-	} else {
-		t.TanggalPOTagihan = nil
-	}
 
 	bulanRealisasi := helpers.ComputeBulanRealisasi(t.TanggalTransaksi)
 	t.BulanRealisasi = &bulanRealisasi
-
-	persentase, nilai := helpers.ComputeManagementFee(t.JumlahRealisasi, project.TarifManagementFeePersen)
-	t.PersentaseManagementFee = persentase
-	t.NilaiManagementFee = nilai
 
 	return nil
 }
@@ -124,12 +96,7 @@ func GetAllTransactions(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch transactions"})
 	}
 
-	responses := make([]TransactionResponse, len(transactions))
-	for i, t := range transactions {
-		responses[i] = toTransactionResponse(t)
-	}
-
-	response, err := helpers.CreatePaginationResponse(queryCount, responses, "transactions", pagination.Page, pagination.Limit)
+	response, err := helpers.CreatePaginationResponse(queryCount, transactions, "transactions", pagination.Page, pagination.Limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create pagination response"})
 	}
@@ -150,12 +117,12 @@ func GetTransaction(c *fiber.Ctx) error {
 	if err := config.DB.Preload("CostType").Preload("Project").Where("id = ?", c.Params("id")).First(&transaction).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Transaction not found"})
 	}
-	return c.JSON(fiber.Map{"transaction": toTransactionResponse(transaction)})
+	return c.JSON(fiber.Map{"transaction": transaction})
 }
 
 // CreateTransaction godoc
 // @Summary Create a new transaction
-// @Description Creates a transaction; bulan_realisasi and the management-fee fields are computed server-side from the project's fee rate
+// @Description Creates a transaction; bulan_realisasi is computed server-side from tanggal_transaksi
 // @Tags Transactions
 // @Security BearerAuth
 // @Param request body models.TransactionRequest true "Transaction details"
@@ -194,7 +161,7 @@ func CreateTransaction(c *fiber.Ctx) error {
 	if err := config.DB.Create(&transaction).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create transaction"})
 	}
-	return c.Status(fiber.StatusCreated).JSON(toTransactionResponse(transaction))
+	return c.Status(fiber.StatusCreated).JSON(transaction)
 }
 
 // UpdateTransaction godoc
@@ -239,7 +206,7 @@ func UpdateTransaction(c *fiber.Ctx) error {
 	if err := config.DB.Save(&transaction).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update transaction"})
 	}
-	return c.JSON(toTransactionResponse(transaction))
+	return c.JSON(transaction)
 }
 
 // DeleteTransaction godoc

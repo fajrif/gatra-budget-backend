@@ -37,16 +37,3 @@ func TestCalculateRemainingBudget(t *testing.T) {
 	result := helpers.CalculateRemainingBudget(1_000_000_000, 650_000_000)
 	assert.Equal(t, 350_000_000.0, result)
 }
-
-func TestCalculateProfitMargin(t *testing.T) {
-	t.Run("nil rate yields zero margin", func(t *testing.T) {
-		result := helpers.CalculateProfitMargin(nil, 500_000_000)
-		assert.Equal(t, 0.0, result)
-	})
-
-	t.Run("present rate computes fee-style margin", func(t *testing.T) {
-		tarif := 10.0
-		result := helpers.CalculateProfitMargin(&tarif, 500_000_000)
-		assert.Equal(t, 50_000_000.0, result)
-	})
-}

@@ -18,6 +18,7 @@ import (
 	"gatra-budget-backend/seeds"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -181,4 +182,27 @@ func seedAddressReferences(t *testing.T, tx *gorm.DB) {
 	if err := seeds.AddressReferenceSeeder(tx); err != nil {
 		t.Fatalf("failed to seed address references: %v", err)
 	}
+}
+
+// newTestProject creates a project and a cost type for tests that need rows
+// to hang transactions or invoices on.
+func newTestProject(t *testing.T, tx *gorm.DB) (models.Project, models.CostType) {
+	t.Helper()
+
+	project := models.Project{
+		NoSP2K:         "SP2K-" + uuid.NewString()[:8],
+		JudulPekerjaan: "Proyek Uji",
+		TanggalMulai:   models.Date{Time: mustParseDate(t, "2024-01-01")},
+		TanggalSelesai: models.Date{Time: mustParseDate(t, "2024-12-31")},
+		NilaiPekerjaan: 1_000_000_000,
+	}
+	if err := tx.Create(&project).Error; err != nil {
+		t.Fatalf("failed to create project: %v", err)
+	}
+
+	costType := models.CostType{NamaBiaya: "Gaji " + uuid.NewString()[:8]}
+	if err := tx.Create(&costType).Error; err != nil {
+		t.Fatalf("failed to create cost type: %v", err)
+	}
+	return project, costType
 }

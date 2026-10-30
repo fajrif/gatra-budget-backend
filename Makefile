@@ -106,7 +106,7 @@ test:
 # Unit tests only: mocked database, no PostgreSQL required.
 test-unit:
 	@echo "🧪 Running unit tests (no database required)..."
-	go test ./internal/... ./tests/handlers/... ./tests/middleware/... ./tests/helpers/... ./tests/services/...
+	go test ./internal/... ./tests/handlers/... ./tests/middleware/... ./tests/helpers/...
 
 # Integration tests: real PostgreSQL. The suite refuses to run unless the
 # target database name contains "_test", so it can never touch dev data.

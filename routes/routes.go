@@ -94,31 +94,29 @@ func Setup(app *fiber.App) {
 	// Projects — full CRUD, any authenticated user
 	projects := api.Group("/projects")
 	projects.Get("/", handlers.GetAllProjects)
+	projects.Post("/import", handlers.ImportProjects)
 	projects.Get("/:id", handlers.GetProject)
-	// Non-sensitive per-project sub-routes (budget-vs-actual by month, SLA
-	// counts) stay open here — the admin-only remaining-budget/profit-margin
-	// figures live in /api/reports/... instead.
-	projects.Get("/:id/budget-trend", handlers.GetProjectBudgetTrend)
-	projects.Get("/:id/sla-breakdown", handlers.GetProjectSLABreakdown)
 	projects.Post("/", handlers.CreateProject)
 	projects.Put("/:id", handlers.UpdateProject)
 	projects.Delete("/:id", handlers.DeleteProject)
 
-	// Budget Items — full CRUD, any authenticated user; project_id/parent_budget_id come from body/query
-	budgetItems := api.Group("/budget-items")
-	budgetItems.Get("/", handlers.GetAllBudgetItems)
-	budgetItems.Get("/:id", handlers.GetBudgetItem)
-	budgetItems.Post("/", handlers.CreateBudgetItem)
-	budgetItems.Put("/:id", handlers.UpdateBudgetItem)
-	budgetItems.Delete("/:id", handlers.DeleteBudgetItem)
-
 	// Transactions — full CRUD, any authenticated user
 	transactions := api.Group("/transactions")
 	transactions.Get("/", handlers.GetAllTransactions)
+	transactions.Post("/import", handlers.ImportTransactions)
 	transactions.Get("/:id", handlers.GetTransaction)
 	transactions.Post("/", handlers.CreateTransaction)
 	transactions.Put("/:id", handlers.UpdateTransaction)
 	transactions.Delete("/:id", handlers.DeleteTransaction)
+
+	// Invoices — full CRUD, any authenticated user
+	invoices := api.Group("/invoices")
+	invoices.Get("/", handlers.GetAllInvoices)
+	invoices.Post("/import", handlers.ImportInvoices)
+	invoices.Get("/:id", handlers.GetInvoice)
+	invoices.Post("/", handlers.CreateInvoice)
+	invoices.Put("/:id", handlers.UpdateInvoice)
+	invoices.Delete("/:id", handlers.DeleteInvoice)
 
 	// Admin only routes
 	api.Use(middleware.AdminOnly())
@@ -140,5 +138,5 @@ func Setup(app *fiber.App) {
 	reports := api.Group("/reports")
 	reports.Get("/projects-summary", handlers.GetProjectsSummaryReport)
 	reports.Get("/projects/:id/summary", handlers.GetProjectSummaryReport)
-	reports.Get("/management-fee", handlers.GetManagementFeeReport)
+	reports.Get("/monthly", handlers.GetMonthlyReport)
 }

@@ -1,7 +1,5 @@
 package helpers
 
-import "math"
-
 // AbsorptionAlertThreshold is the fraction of contract value realized above
 // which a project is flagged for the absorption alert (80%).
 const AbsorptionAlertThreshold = 0.8
@@ -21,15 +19,4 @@ func CalculateAbsorption(nilaiPekerjaan, totalRealisasi float64) (pct float64, a
 // contract value minus total realized transactions.
 func CalculateRemainingBudget(nilaiPekerjaan, totalRealisasi float64) float64 {
 	return nilaiPekerjaan - totalRealisasi
-}
-
-// CalculateProfitMargin is the management-fee-style profit margin: the
-// project's fee rate applied to total realized transactions. Returns 0 when
-// the project has no fee rate set.
-func CalculateProfitMargin(tarifPersen *float64, totalRealisasi float64) float64 {
-	if tarifPersen == nil {
-		return 0
-	}
-
-	return math.Round((*tarifPersen/100)*totalRealisasi*100) / 100
 }

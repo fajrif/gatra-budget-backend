@@ -323,274 +323,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/budget-items": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Retrieve budget items, optionally filtered by project or parent",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "BudgetItems"
-                ],
-                "summary": "Get all budget items",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Filter by project ID (UUID)",
-                        "name": "project_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by parent budget item ID (UUID)",
-                        "name": "parent_budget_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Items per page (default: 20)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Get all records without pagination",
-                        "name": "all",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of budget items with pagination",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Creates a parent budget item; \"monthly\" items also create evenly-split monthly children",
-                "tags": [
-                    "BudgetItems"
-                ],
-                "summary": "Create a new budget item",
-                "parameters": [
-                    {
-                        "description": "Budget item details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.BudgetItemRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created budget item",
-                        "schema": {
-                            "$ref": "#/definitions/models.BudgetItem"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Project or cost type not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/budget-items/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "tags": [
-                    "BudgetItems"
-                ],
-                "summary": "Get a budget item by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Budget item ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Budget item details",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Budget item not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Updates a parent budget item. Monthly items are re-synced: children are destroyed and rebuilt against the new total. Non-parent rows are updated directly.",
-                "tags": [
-                    "BudgetItems"
-                ],
-                "summary": "Update a budget item",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Budget item ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated budget item details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.BudgetItemRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated budget item",
-                        "schema": {
-                            "$ref": "#/definitions/models.BudgetItem"
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Budget item not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Deletes a budget item. Deleting a parent cascades to its monthly children.",
-                "tags": [
-                    "BudgetItems"
-                ],
-                "summary": "Delete a budget item",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Budget item ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Budget item deleted successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Budget item not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/cities": {
             "get": {
                 "security": [
@@ -1850,6 +1582,351 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/invoices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve invoices, optionally filtered by project, status or billing month, with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Get all invoices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by project ID (UUID)",
+                        "name": "project_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (Submit, Clearing)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tgl_tagihan month (YYYY-MM)",
+                        "name": "month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by no_invoice or nama_invoice",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Get all records without pagination",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of invoices with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Create a new invoice",
+                "parameters": [
+                    {
+                        "description": "Invoice details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.InvoiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created invoice",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "no_invoice already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/invoices/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_invoice already exists updates that invoice.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Import invoices from Excel rows",
+                "parameters": [
+                    {
+                        "description": "rows: list of invoice rows (see template)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "total, created, updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or too many rows",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "Validation errors per row",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/invoices/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Get an invoice by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invoice details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Update an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated invoice details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.InvoiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated invoice",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice or project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "no_invoice already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Delete an invoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invoice deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/me": {
             "get": {
                 "security": [
@@ -2212,8 +2289,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by status (Active, Pending, Non Aktif)",
-                        "name": "status_kontrak",
+                        "description": "Filter by contract status (not_started, ongoing, expired)",
+                        "name": "contract_status",
                         "in": "query"
                     },
                     {
@@ -2300,8 +2377,69 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
+                    "409": {
+                        "description": "no_sp2k already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/projects/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_sp2k already exists updates that project.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Import projects from Excel rows",
+                "parameters": [
+                    {
+                        "description": "rows: list of project rows (see template)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "total, created, updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or too many rows",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "Validation errors per row",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2396,6 +2534,13 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
+                    "409": {
+                        "description": "no_sp2k already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -2441,70 +2586,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/projects/{id}/budget-trend": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Non-sensitive per-month allocated (budget item children) vs realized (transactions) totals",
-                "tags": [
-                    "Projects"
-                ],
-                "summary": "Get a project's monthly budget-vs-actual trend",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Monthly budget trend",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/projects/{id}/sla-breakdown": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Non-sensitive count of this project's transactions by SLA status",
-                "tags": [
-                    "Projects"
-                ],
-                "summary": "Get a project's payment SLA breakdown",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID (UUID)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "SLA breakdown",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2757,21 +2838,42 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/reports/management-fee": {
+        "/api/reports/monthly": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Realized spend and management fee per project per month, with grand totals. Computed server-side only; the client renders this as-is.",
+                "description": "Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices by tgl_bayar), and received minus expenses. Optionally scoped to one project.",
                 "tags": [
                     "Reports"
                 ],
-                "summary": "Get the management fee breakdown by project and month (admin only)",
+                "summary": "Get the monthly expense and invoice report (admin only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Year (default: current year)",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Limit to one project (UUID)",
+                        "name": "project_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Rows by project and month, plus totals",
+                        "description": "Rows per month, plus totals",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid year",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2801,7 +2903,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Per-project contract value, realized total, remaining budget, absorption (alert at 80%), and management-fee-style profit margin",
+                "description": "Per-project contract value, realized total, remaining budget, absorption (alert at 80%), invoice totals, and profit margin (sum of invoice manajemen_fee)",
                 "tags": [
                     "Reports"
                 ],
@@ -2809,8 +2911,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Filter by status (Active, Pending, Non Aktif)",
-                        "name": "status_kontrak",
+                        "description": "Filter by contract status (not_started, ongoing, expired)",
+                        "name": "contract_status",
                         "in": "query"
                     },
                     {
@@ -2981,7 +3083,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a transaction; bulan_realisasi and the management-fee fields are computed server-side from the project's fee rate",
+                "description": "Creates a transaction; bulan_realisasi is computed server-side from tanggal_transaksi",
                 "tags": [
                     "Transactions"
                 ],
@@ -3020,6 +3122,60 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/import": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). Transactions have no natural key, so every row creates a new transaction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Transactions"
+                ],
+                "summary": "Import transactions from Excel rows",
+                "parameters": [
+                    {
+                        "description": "rows: list of transaction rows (see template)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "total, created, updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body or too many rows",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "Validation errors per row",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3824,79 +3980,6 @@ const docTemplate = `{
                 }
             }
         },
-        "models.BudgetItem": {
-            "type": "object",
-            "properties": {
-                "bulan_ke": {
-                    "type": "integer"
-                },
-                "cost_type": {
-                    "$ref": "#/definitions/models.CostType"
-                },
-                "cost_type_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deskripsi_anggaran": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_parent": {
-                    "type": "boolean"
-                },
-                "jenis_biaya_name": {
-                    "type": "string"
-                },
-                "jumlah_anggaran": {
-                    "type": "number"
-                },
-                "kategori_anggaran": {
-                    "type": "string"
-                },
-                "parent_budget_id": {
-                    "type": "string"
-                },
-                "periode_bulan": {
-                    "type": "string"
-                },
-                "project": {
-                    "$ref": "#/definitions/models.Project"
-                },
-                "project_id": {
-                    "type": "string"
-                },
-                "total_anggaran": {
-                    "type": "number"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.BudgetItemRequest": {
-            "type": "object",
-            "properties": {
-                "cost_type_id": {
-                    "type": "string"
-                },
-                "deskripsi_anggaran": {
-                    "type": "string"
-                },
-                "kategori_anggaran": {
-                    "type": "string"
-                },
-                "project_id": {
-                    "type": "string"
-                },
-                "total_anggaran": {
-                    "type": "number"
-                }
-            }
-        },
         "models.City": {
             "type": "object",
             "properties": {
@@ -4020,6 +4103,85 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Invoice": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "manajemen_fee": {
+                    "type": "number"
+                },
+                "nama_invoice": {
+                    "type": "string"
+                },
+                "nilai": {
+                    "type": "number"
+                },
+                "no_invoice": {
+                    "type": "string"
+                },
+                "project": {
+                    "$ref": "#/definitions/models.Project"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tgl_bayar": {
+                    "$ref": "#/definitions/models.Date"
+                },
+                "tgl_tagihan": {
+                    "$ref": "#/definitions/models.Date"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.InvoiceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "manajemen_fee": {
+                    "type": "number"
+                },
+                "nama_invoice": {
+                    "type": "string"
+                },
+                "nilai": {
+                    "type": "number"
+                },
+                "no_invoice": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tgl_bayar": {
+                    "type": "string"
+                },
+                "tgl_tagihan": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Project": {
             "type": "object",
             "properties": {
@@ -4050,9 +4212,6 @@ const docTemplate = `{
                 "judul_pekerjaan": {
                     "type": "string"
                 },
-                "management_fee": {
-                    "type": "number"
-                },
                 "nilai_pekerjaan": {
                     "type": "number"
                 },
@@ -4065,9 +4224,6 @@ const docTemplate = `{
                 "no_sp2k": {
                     "type": "string"
                 },
-                "status_kontrak": {
-                    "type": "string"
-                },
                 "tanggal_mulai": {
                     "$ref": "#/definitions/models.Date"
                 },
@@ -4076,9 +4232,6 @@ const docTemplate = `{
                 },
                 "tanggal_selesai": {
                     "$ref": "#/definitions/models.Date"
-                },
-                "tarif_management_fee_persen": {
-                    "type": "number"
                 },
                 "updated_at": {
                     "type": "string"
@@ -4097,9 +4250,6 @@ const docTemplate = `{
                 "judul_pekerjaan": {
                     "type": "string"
                 },
-                "management_fee": {
-                    "type": "number"
-                },
                 "nilai_pekerjaan": {
                     "type": "number"
                 },
@@ -4112,9 +4262,6 @@ const docTemplate = `{
                 "no_sp2k": {
                     "type": "string"
                 },
-                "status_kontrak": {
-                    "type": "string"
-                },
                 "tanggal_mulai": {
                     "type": "string"
                 },
@@ -4123,9 +4270,6 @@ const docTemplate = `{
                 },
                 "tanggal_selesai": {
                     "type": "string"
-                },
-                "tarif_management_fee_persen": {
-                    "type": "number"
                 }
             }
         },
@@ -4155,9 +4299,6 @@ const docTemplate = `{
         "models.Transaction": {
             "type": "object",
             "properties": {
-                "bukti_transaksi_url": {
-                    "type": "string"
-                },
                 "bulan_realisasi": {
                     "type": "string"
                 },
@@ -4185,20 +4326,11 @@ const docTemplate = `{
                 "jumlah_tenaga_kerja": {
                     "type": "integer"
                 },
-                "nilai_management_fee": {
-                    "type": "number"
-                },
-                "persentase_management_fee": {
-                    "type": "number"
-                },
                 "project": {
                     "$ref": "#/definitions/models.Project"
                 },
                 "project_id": {
                     "type": "string"
-                },
-                "tanggal_po_tagihan": {
-                    "$ref": "#/definitions/models.Date"
                 },
                 "tanggal_transaksi": {
                     "$ref": "#/definitions/models.Date"
@@ -4224,9 +4356,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "project_id": {
-                    "type": "string"
-                },
-                "tanggal_po_tagihan": {
                     "type": "string"
                 },
                 "tanggal_transaksi": {

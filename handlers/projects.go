@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"time"
+
 	"gatra-budget-backend/config"
 	"gatra-budget-backend/helpers"
 	"gatra-budget-backend/models"
@@ -22,19 +24,36 @@ func ValidateProjectRequest(req *models.ProjectRequest) error {
 	if req.TanggalMulai == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "tanggal_mulai is required")
 	}
-	if req.TanggalSelesai != nil && *req.TanggalSelesai != "" && *req.TanggalSelesai <= req.TanggalMulai {
+	if req.TanggalSelesai == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "tanggal_selesai is required")
+	}
+	if req.TanggalSelesai <= req.TanggalMulai {
 		return fiber.NewError(fiber.StatusBadRequest, "tanggal_selesai harus setelah tanggal_mulai")
 	}
 	if req.TanggalPerjanjian != nil && *req.TanggalPerjanjian != "" && *req.TanggalPerjanjian > req.TanggalMulai {
 		return fiber.NewError(fiber.StatusBadRequest, "tanggal_perjanjian tidak boleh setelah tanggal_mulai")
 	}
-	if req.ManagementFee != nil && *req.ManagementFee >= req.NilaiPekerjaan {
-		return fiber.NewError(fiber.StatusBadRequest, "management_fee tidak boleh melebihi nilai_pekerjaan")
-	}
-	if req.StatusKontrak != "" && req.StatusKontrak != "Active" && req.StatusKontrak != "Pending" && req.StatusKontrak != "Non Aktif" {
-		return fiber.NewError(fiber.StatusBadRequest, "status_kontrak must be 'Active', 'Pending', or 'Non Aktif'")
-	}
 	return nil
+}
+
+// ProjectResponse wraps a Project with its contract status, which is derived
+// from the dates on every read (not persisted): not_started, ongoing or
+// expired, plus an ending-soon flag when an ongoing contract ends within a month.
+type ProjectResponse struct {
+	models.Project
+	ContractStatus string `json:"contract_status"`
+	EndingSoon     bool   `json:"ending_soon"`
+	DaysRemaining  int    `json:"days_remaining"`
+}
+
+func toProjectResponse(p models.Project) ProjectResponse {
+	today := time.Now()
+	return ProjectResponse{
+		Project:        p,
+		ContractStatus: helpers.ContractStatus(p.TanggalMulai.Time, p.TanggalSelesai.Time, today),
+		EndingSoon:     helpers.ContractEndingSoon(p.TanggalMulai.Time, p.TanggalSelesai.Time, today),
+		DaysRemaining:  helpers.ContractDaysRemaining(p.TanggalSelesai.Time, today),
+	}
 }
 
 // applyProjectRequest copies a validated ProjectRequest onto a Project,
@@ -45,7 +64,7 @@ func applyProjectRequest(p *models.Project, req *models.ProjectRequest) error {
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid tanggal_mulai: "+err.Error())
 	}
-	tanggalSelesai, err := helpers.ParseDateString(req.TanggalSelesai)
+	tanggalSelesai, err := helpers.ParseDateString(&req.TanggalSelesai)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid tanggal_selesai: "+err.Error())
 	}
@@ -59,21 +78,11 @@ func applyProjectRequest(p *models.Project, req *models.ProjectRequest) error {
 	p.NoAmandemen = req.NoAmandemen
 	p.JudulPekerjaan = req.JudulPekerjaan
 	p.NilaiPekerjaan = req.NilaiPekerjaan
-	p.ManagementFee = req.ManagementFee
-	p.TarifManagementFeePersen = req.TarifManagementFeePersen
 	p.ClientID = helpers.ParseUUIDPtr(req.ClientID)
 	p.ContractTypeID = helpers.ParseUUIDPtr(req.ContractTypeID)
-	p.StatusKontrak = req.StatusKontrak
-	if p.StatusKontrak == "" {
-		p.StatusKontrak = "Active"
-	}
 
 	p.TanggalMulai = models.Date{Time: *tanggalMulai}
-	if tanggalSelesai != nil {
-		p.TanggalSelesai = &models.Date{Time: *tanggalSelesai}
-	} else {
-		p.TanggalSelesai = nil
-	}
+	p.TanggalSelesai = models.Date{Time: *tanggalSelesai}
 	if tanggalPerjanjian != nil {
 		p.TanggalPerjanjian = &models.Date{Time: *tanggalPerjanjian}
 	} else {
@@ -81,14 +90,24 @@ func applyProjectRequest(p *models.Project, req *models.ProjectRequest) error {
 	}
 
 	// JangkaWaktu is always server-computed, never bound from the request.
-	if tanggalSelesai != nil {
-		months := helpers.CalculateDurationInMonths(*tanggalMulai, *tanggalSelesai)
-		p.JangkaWaktu = &months
-	} else {
-		p.JangkaWaktu = nil
-	}
+	months := helpers.CalculateDurationInMonths(*tanggalMulai, *tanggalSelesai)
+	p.JangkaWaktu = &months
 
 	return nil
+}
+
+// contractStatusCondition is the SQL form of helpers.ContractStatus, so list
+// filtering agrees with the status shown on each row.
+func contractStatusCondition(status string) (string, bool) {
+	switch status {
+	case helpers.ContractNotStarted:
+		return "tanggal_mulai > CURRENT_DATE", true
+	case helpers.ContractOngoing:
+		return "tanggal_mulai <= CURRENT_DATE AND tanggal_selesai >= CURRENT_DATE", true
+	case helpers.ContractExpired:
+		return "tanggal_selesai < CURRENT_DATE", true
+	}
+	return "", false
 }
 
 // GetAllProjects godoc
@@ -98,7 +117,7 @@ func applyProjectRequest(p *models.Project, req *models.ProjectRequest) error {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param status_kontrak query string false "Filter by status (Active, Pending, Non Aktif)"
+// @Param contract_status query string false "Filter by contract status (not_started, ongoing, expired)"
 // @Param search query string false "Search by no_sp2k or judul_pekerjaan"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
@@ -118,9 +137,13 @@ func GetAllProjects(c *fiber.Ctx) error {
 		pagination.Offset = 0
 	}
 
-	if status := c.Query("status_kontrak"); status != "" {
-		query = query.Where("status_kontrak = ?", status)
-		queryCount = queryCount.Where("status_kontrak = ?", status)
+	if status := c.Query("contract_status"); status != "" {
+		cond, ok := contractStatusCondition(status)
+		if !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "contract_status must be not_started, ongoing, or expired"})
+		}
+		query = query.Where(cond)
+		queryCount = queryCount.Where(cond)
 	}
 
 	if search := c.Query("search"); search != "" {
@@ -135,7 +158,12 @@ func GetAllProjects(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch projects"})
 	}
 
-	response, err := helpers.CreatePaginationResponse(queryCount, projects, "projects", pagination.Page, pagination.Limit)
+	responses := make([]ProjectResponse, len(projects))
+	for i, p := range projects {
+		responses[i] = toProjectResponse(p)
+	}
+
+	response, err := helpers.CreatePaginationResponse(queryCount, responses, "projects", pagination.Page, pagination.Limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create pagination response"})
 	}
@@ -156,7 +184,7 @@ func GetProject(c *fiber.Ctx) error {
 	if err := config.DB.Preload("Client").Preload("ContractType").Where("id = ?", c.Params("id")).First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
 	}
-	return c.JSON(fiber.Map{"project": project})
+	return c.JSON(fiber.Map{"project": toProjectResponse(project)})
 }
 
 // CreateProject godoc
@@ -166,6 +194,7 @@ func GetProject(c *fiber.Ctx) error {
 // @Param request body models.ProjectRequest true "Project details"
 // @Success 201 {object} models.Project "Created project"
 // @Failure 400 {object} map[string]any "Invalid request body"
+// @Failure 409 {object} map[string]any "no_sp2k already exists"
 // @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/projects [post]
 func CreateProject(c *fiber.Ctx) error {
@@ -175,6 +204,11 @@ func CreateProject(c *fiber.Ctx) error {
 	}
 	if err := ValidateProjectRequest(&req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	var existing models.Project
+	if err := config.DB.Where("LOWER(no_sp2k) = LOWER(?)", req.NoSP2K).First(&existing).Error; err == nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "no_sp2k already exists"})
 	}
 
 	var project models.Project
@@ -188,7 +222,7 @@ func CreateProject(c *fiber.Ctx) error {
 	if err := config.DB.Create(&project).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create project"})
 	}
-	return c.Status(fiber.StatusCreated).JSON(project)
+	return c.Status(fiber.StatusCreated).JSON(toProjectResponse(project))
 }
 
 // UpdateProject godoc
@@ -200,6 +234,7 @@ func CreateProject(c *fiber.Ctx) error {
 // @Success 200 {object} models.Project "Updated project"
 // @Failure 400 {object} map[string]any "Invalid request body"
 // @Failure 404 {object} map[string]any "Project not found"
+// @Failure 409 {object} map[string]any "no_sp2k already exists"
 // @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/projects/{id} [put]
 func UpdateProject(c *fiber.Ctx) error {
@@ -215,6 +250,12 @@ func UpdateProject(c *fiber.Ctx) error {
 	if err := ValidateProjectRequest(&req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	var existing models.Project
+	if err := config.DB.Where("LOWER(no_sp2k) = LOWER(?) AND id <> ?", req.NoSP2K, project.ID).First(&existing).Error; err == nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "no_sp2k already exists"})
+	}
+
 	if err := applyProjectRequest(&project, &req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -222,7 +263,7 @@ func UpdateProject(c *fiber.Ctx) error {
 	if err := config.DB.Save(&project).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update project"})
 	}
-	return c.JSON(project)
+	return c.JSON(toProjectResponse(project))
 }
 
 // DeleteProject godoc

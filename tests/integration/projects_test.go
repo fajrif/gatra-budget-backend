@@ -1,11 +1,16 @@
 package integration
 
 import (
+	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"gatra-budget-backend/handlers"
 	"gatra-budget-backend/models"
+
+	"github.com/google/uuid"
 )
 
 // TestProjectClientSetNullOnDelete proves the real ON DELETE SET NULL on
@@ -23,9 +28,9 @@ func TestProjectClientSetNullOnDelete(t *testing.T) {
 		NoSP2K:         "SP2K-001",
 		JudulPekerjaan: "Pembangunan Gedung",
 		TanggalMulai:   models.Date{Time: mustParseDate(t, "2024-01-01")},
+		TanggalSelesai: models.Date{Time: mustParseDate(t, "2024-12-31")},
 		NilaiPekerjaan: 1_000_000_000,
 		ClientID:       &client.ID,
-		StatusKontrak:  "Active",
 	}
 	if err := tx.Create(&project).Error; err != nil {
 		t.Fatalf("failed to create project: %v", err)
@@ -83,4 +88,38 @@ func mustParseDate(t *testing.T, s string) (parsed time.Time) {
 		t.Fatalf("failed to parse date %q: %v", s, err)
 	}
 	return parsed
+}
+
+// TestProjectNoSP2KIsUnique proves the case-insensitive unique index, and that
+// the CRUD handlers answer 409 before reaching it.
+func TestProjectNoSP2KIsUnique(t *testing.T) {
+	tx := withTx(t)
+	first, _ := newTestProject(t, tx)
+
+	// A failed statement aborts the surrounding transaction, so use a savepoint.
+	tx.Exec("SAVEPOINT dup")
+	second := first
+	second.ID = uuid.New()
+	second.NoSP2K = strings.ToLower(first.NoSP2K)
+	if err := tx.Create(&second).Error; err == nil {
+		t.Fatal("expected the unique index to reject a no_sp2k differing only by case")
+	}
+	tx.Exec("ROLLBACK TO SAVEPOINT dup")
+
+	a := app()
+	a.Post("/projects", handlers.CreateProject)
+	a.Put("/projects/:id", handlers.UpdateProject)
+
+	other, _ := newTestProject(t, tx)
+	body := fmt.Sprintf(`{"no_sp2k":%q,"judul_pekerjaan":"X","tanggal_mulai":"2026-01-01","tanggal_selesai":"2026-12-31","nilai_pekerjaan":1000}`, first.NoSP2K)
+
+	if resp := doJSON(t, a, "POST", "/projects", body); resp.StatusCode != http.StatusConflict {
+		t.Fatalf("create with a taken no_sp2k: expected 409, got %d", resp.StatusCode)
+	}
+	if resp := doJSON(t, a, "PUT", "/projects/"+other.ID.String(), body); resp.StatusCode != http.StatusConflict {
+		t.Fatalf("update to a taken no_sp2k: expected 409, got %d", resp.StatusCode)
+	}
+	if resp := doJSON(t, a, "PUT", "/projects/"+first.ID.String(), body); resp.StatusCode != http.StatusOK {
+		t.Fatalf("saving a project under its own no_sp2k must work, got %d", resp.StatusCode)
+	}
 }

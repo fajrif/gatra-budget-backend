@@ -9,7 +9,7 @@ import (
 
 func TestTransactionMinimumAmountCheckConstraint(t *testing.T) {
 	tx := withTx(t)
-	project, costType := newBudgetItemTestProject(t, tx)
+	project, costType := newTestProject(t, tx)
 
 	transaction := models.Transaction{
 		ProjectID:        project.ID,
@@ -24,17 +24,11 @@ func TestTransactionMinimumAmountCheckConstraint(t *testing.T) {
 	}
 }
 
-// TestTransactionCreateComputesFieldsAgainstRealDB exercises CreateTransaction
-// end-to-end: bulan_realisasi format and the paired management-fee fields,
-// against the real database rather than a mock.
-func TestTransactionCreateComputesFieldsAgainstRealDB(t *testing.T) {
+// TestTransactionCreateComputesBulanRealisasiAgainstRealDB exercises
+// CreateTransaction end-to-end against the real database.
+func TestTransactionCreateComputesBulanRealisasiAgainstRealDB(t *testing.T) {
 	tx := withTx(t)
-	project, costType := newBudgetItemTestProject(t, tx)
-
-	tarif := 12.5
-	if err := tx.Model(&project).Update("tarif_management_fee_persen", tarif).Error; err != nil {
-		t.Fatalf("failed to set tarif_management_fee_persen: %v", err)
-	}
+	project, costType := newTestProject(t, tx)
 
 	a := app()
 	a.Post("/transactions", handlers.CreateTransaction)
@@ -54,19 +48,11 @@ func TestTransactionCreateComputesFieldsAgainstRealDB(t *testing.T) {
 	if created["bulan_realisasi"] != "2024-02" {
 		t.Fatalf("expected bulan_realisasi '2024-02', got %v", created["bulan_realisasi"])
 	}
-	nilaiFee, ok := created["nilai_management_fee"].(float64)
-	if !ok || nilaiFee != 250_000 {
-		t.Fatalf("expected nilai_management_fee 250000 (12.5%% of 2,000,000), got %v", created["nilai_management_fee"])
-	}
-	persentaseFee, ok := created["persentase_management_fee"].(float64)
-	if !ok || persentaseFee != tarif {
-		t.Fatalf("expected persentase_management_fee %v, got %v", tarif, created["persentase_management_fee"])
-	}
 }
 
 func TestTransactionProjectCascadeDeletesTransactions(t *testing.T) {
 	tx := withTx(t)
-	project, costType := newBudgetItemTestProject(t, tx)
+	project, costType := newTestProject(t, tx)
 
 	transaction := models.Transaction{
 		ProjectID:        project.ID,

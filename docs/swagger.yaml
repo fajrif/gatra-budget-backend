@@ -68,54 +68,6 @@ definitions:
       updated_at:
         type: string
     type: object
-  models.BudgetItem:
-    properties:
-      bulan_ke:
-        type: integer
-      cost_type:
-        $ref: '#/definitions/models.CostType'
-      cost_type_id:
-        type: string
-      created_at:
-        type: string
-      deskripsi_anggaran:
-        type: string
-      id:
-        type: string
-      is_parent:
-        type: boolean
-      jenis_biaya_name:
-        type: string
-      jumlah_anggaran:
-        type: number
-      kategori_anggaran:
-        type: string
-      parent_budget_id:
-        type: string
-      periode_bulan:
-        type: string
-      project:
-        $ref: '#/definitions/models.Project'
-      project_id:
-        type: string
-      total_anggaran:
-        type: number
-      updated_at:
-        type: string
-    type: object
-  models.BudgetItemRequest:
-    properties:
-      cost_type_id:
-        type: string
-      deskripsi_anggaran:
-        type: string
-      kategori_anggaran:
-        type: string
-      project_id:
-        type: string
-      total_anggaran:
-        type: number
-    type: object
   models.City:
     properties:
       created_at:
@@ -196,6 +148,58 @@ definitions:
       time.Time:
         type: string
     type: object
+  models.Invoice:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      manajemen_fee:
+        type: number
+      nama_invoice:
+        type: string
+      nilai:
+        type: number
+      no_invoice:
+        type: string
+      project:
+        $ref: '#/definitions/models.Project'
+      project_id:
+        type: string
+      status:
+        type: string
+      tgl_bayar:
+        $ref: '#/definitions/models.Date'
+      tgl_tagihan:
+        $ref: '#/definitions/models.Date'
+      updated_at:
+        type: string
+    type: object
+  models.InvoiceRequest:
+    properties:
+      description:
+        type: string
+      manajemen_fee:
+        type: number
+      nama_invoice:
+        type: string
+      nilai:
+        type: number
+      no_invoice:
+        type: string
+      project_id:
+        type: string
+      status:
+        type: string
+      tgl_bayar:
+        type: string
+      tgl_tagihan:
+        type: string
+    type: object
   models.Project:
     properties:
       client:
@@ -216,8 +220,6 @@ definitions:
         type: integer
       judul_pekerjaan:
         type: string
-      management_fee:
-        type: number
       nilai_pekerjaan:
         type: number
       no_amandemen:
@@ -226,16 +228,12 @@ definitions:
         type: string
       no_sp2k:
         type: string
-      status_kontrak:
-        type: string
       tanggal_mulai:
         $ref: '#/definitions/models.Date'
       tanggal_perjanjian:
         $ref: '#/definitions/models.Date'
       tanggal_selesai:
         $ref: '#/definitions/models.Date'
-      tarif_management_fee_persen:
-        type: number
       updated_at:
         type: string
     type: object
@@ -247,8 +245,6 @@ definitions:
         type: string
       judul_pekerjaan:
         type: string
-      management_fee:
-        type: number
       nilai_pekerjaan:
         type: number
       no_amandemen:
@@ -257,16 +253,12 @@ definitions:
         type: string
       no_sp2k:
         type: string
-      status_kontrak:
-        type: string
       tanggal_mulai:
         type: string
       tanggal_perjanjian:
         type: string
       tanggal_selesai:
         type: string
-      tarif_management_fee_persen:
-        type: number
     type: object
   models.Province:
     properties:
@@ -285,8 +277,6 @@ definitions:
     type: object
   models.Transaction:
     properties:
-      bukti_transaksi_url:
-        type: string
       bulan_realisasi:
         type: string
       cost_type:
@@ -305,16 +295,10 @@ definitions:
         type: number
       jumlah_tenaga_kerja:
         type: integer
-      nilai_management_fee:
-        type: number
-      persentase_management_fee:
-        type: number
       project:
         $ref: '#/definitions/models.Project'
       project_id:
         type: string
-      tanggal_po_tagihan:
-        $ref: '#/definitions/models.Date'
       tanggal_transaksi:
         $ref: '#/definitions/models.Date'
       updated_at:
@@ -331,8 +315,6 @@ definitions:
       jumlah_tenaga_kerja:
         type: integer
       project_id:
-        type: string
-      tanggal_po_tagihan:
         type: string
       tanggal_transaksi:
         type: string
@@ -577,185 +559,6 @@ paths:
       summary: User login
       tags:
       - Authentication
-  /api/budget-items:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve budget items, optionally filtered by project or parent
-      parameters:
-      - description: Filter by project ID (UUID)
-        in: query
-        name: project_id
-        type: string
-      - description: Filter by parent budget item ID (UUID)
-        in: query
-        name: parent_budget_id
-        type: string
-      - description: 'Page number (default: 1)'
-        in: query
-        name: page
-        type: integer
-      - description: 'Items per page (default: 20)'
-        in: query
-        name: limit
-        type: integer
-      - description: Get all records without pagination
-        in: query
-        name: all
-        type: boolean
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of budget items with pagination
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all budget items
-      tags:
-      - BudgetItems
-    post:
-      description: Creates a parent budget item; "monthly" items also create evenly-split
-        monthly children
-      parameters:
-      - description: Budget item details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/models.BudgetItemRequest'
-      responses:
-        "201":
-          description: Created budget item
-          schema:
-            $ref: '#/definitions/models.BudgetItem'
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Project or cost type not found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new budget item
-      tags:
-      - BudgetItems
-  /api/budget-items/{id}:
-    delete:
-      description: Deletes a budget item. Deleting a parent cascades to its monthly
-        children.
-      parameters:
-      - description: Budget item ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: Budget item deleted successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Budget item not found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete a budget item
-      tags:
-      - BudgetItems
-    get:
-      parameters:
-      - description: Budget item ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: Budget item details
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Budget item not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get a budget item by ID
-      tags:
-      - BudgetItems
-    put:
-      description: 'Updates a parent budget item. Monthly items are re-synced: children
-        are destroyed and rebuilt against the new total. Non-parent rows are updated
-        directly.'
-      parameters:
-      - description: Budget item ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Updated budget item details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/models.BudgetItemRequest'
-      responses:
-        "200":
-          description: Updated budget item
-          schema:
-            $ref: '#/definitions/models.BudgetItem'
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Budget item not found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update a budget item
-      tags:
-      - BudgetItems
   /api/cities:
     get:
       consumes:
@@ -1571,6 +1374,234 @@ paths:
       summary: Update a country
       tags:
       - Countries
+  /api/invoices:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve invoices, optionally filtered by project, status or billing
+        month, with pagination
+      parameters:
+      - description: Filter by project ID (UUID)
+        in: query
+        name: project_id
+        type: string
+      - description: Filter by status (Submit, Clearing)
+        in: query
+        name: status
+        type: string
+      - description: Filter by tgl_tagihan month (YYYY-MM)
+        in: query
+        name: month
+        type: string
+      - description: Search by no_invoice or nama_invoice
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of invoices with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all invoices
+      tags:
+      - Invoices
+    post:
+      parameters:
+      - description: Invoice details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.InvoiceRequest'
+      responses:
+        "201":
+          description: Created invoice
+          schema:
+            $ref: '#/definitions/models.Invoice'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: no_invoice already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new invoice
+      tags:
+      - Invoices
+  /api/invoices/{id}:
+    delete:
+      parameters:
+      - description: Invoice ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Invoice deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invoice not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an invoice
+      tags:
+      - Invoices
+    get:
+      parameters:
+      - description: Invoice ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Invoice details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invoice not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an invoice by ID
+      tags:
+      - Invoices
+    put:
+      parameters:
+      - description: Invoice ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated invoice details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.InvoiceRequest'
+      responses:
+        "200":
+          description: Updated invoice
+          schema:
+            $ref: '#/definitions/models.Invoice'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invoice or project not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: no_invoice already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an invoice
+      tags:
+      - Invoices
+  /api/invoices/import:
+    post:
+      consumes:
+      - application/json
+      description: Validates every row first; if any row is invalid nothing is saved
+        and all errors are returned (422). A row whose no_invoice already exists updates
+        that invoice.
+      parameters:
+      - description: 'rows: list of invoice rows (see template)'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: total, created, updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid body or too many rows
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Validation errors per row
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import invoices from Excel rows
+      tags:
+      - Invoices
   /api/me:
     get:
       consumes:
@@ -1800,9 +1831,9 @@ paths:
       description: Retrieve all projects with optional status filter, search, and
         pagination
       parameters:
-      - description: Filter by status (Active, Pending, Non Aktif)
+      - description: Filter by contract status (not_started, ongoing, expired)
         in: query
-        name: status_kontrak
+        name: contract_status
         type: string
       - description: Search by no_sp2k or judul_pekerjaan
         in: query
@@ -1858,6 +1889,11 @@ paths:
             $ref: '#/definitions/models.Project'
         "400":
           description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: no_sp2k already exists
           schema:
             additionalProperties: true
             type: object
@@ -1951,6 +1987,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "409":
+          description: no_sp2k already exists
+          schema:
+            additionalProperties: true
+            type: object
         "500":
           description: Internal server error
           schema:
@@ -1961,45 +2002,41 @@ paths:
       summary: Update a project
       tags:
       - Projects
-  /api/projects/{id}/budget-trend:
-    get:
-      description: Non-sensitive per-month allocated (budget item children) vs realized
-        (transactions) totals
+  /api/projects/import:
+    post:
+      consumes:
+      - application/json
+      description: Validates every row first; if any row is invalid nothing is saved
+        and all errors are returned (422). A row whose no_sp2k already exists updates
+        that project.
       parameters:
-      - description: Project ID (UUID)
-        in: path
-        name: id
+      - description: 'rows: list of project rows (see template)'
+        in: body
+        name: request
         required: true
-        type: string
+        schema:
+          type: object
+      produces:
+      - application/json
       responses:
         "200":
-          description: Monthly budget trend
+          description: total, created, updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid body or too many rows
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Validation errors per row
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Get a project's monthly budget-vs-actual trend
-      tags:
-      - Projects
-  /api/projects/{id}/sla-breakdown:
-    get:
-      description: Non-sensitive count of this project's transactions by SLA status
-      parameters:
-      - description: Project ID (UUID)
-        in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        "200":
-          description: SLA breakdown
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get a project's payment SLA breakdown
+      summary: Import projects from Excel rows
       tags:
       - Projects
   /api/provinces:
@@ -2160,13 +2197,28 @@ paths:
       summary: Update a province
       tags:
       - Provinces
-  /api/reports/management-fee:
+  /api/reports/monthly:
     get:
-      description: Realized spend and management fee per project per month, with grand
-        totals. Computed server-side only; the client renders this as-is.
+      description: 'Twelve months of one year: expenses (transactions by bulan_realisasi),
+        billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices
+        by tgl_bayar), and received minus expenses. Optionally scoped to one project.'
+      parameters:
+      - description: 'Year (default: current year)'
+        in: query
+        name: year
+        type: integer
+      - description: Limit to one project (UUID)
+        in: query
+        name: project_id
+        type: string
       responses:
         "200":
-          description: Rows by project and month, plus totals
+          description: Rows per month, plus totals
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid year
           schema:
             additionalProperties: true
             type: object
@@ -2182,17 +2234,17 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Get the management fee breakdown by project and month (admin only)
+      summary: Get the monthly expense and invoice report (admin only)
       tags:
       - Reports
   /api/reports/projects-summary:
     get:
       description: Per-project contract value, realized total, remaining budget, absorption
-        (alert at 80%), and management-fee-style profit margin
+        (alert at 80%), invoice totals, and profit margin (sum of invoice manajemen_fee)
       parameters:
-      - description: Filter by status (Active, Pending, Non Aktif)
+      - description: Filter by contract status (not_started, ongoing, expired)
         in: query
-        name: status_kontrak
+        name: contract_status
         type: string
       - description: 'Page number (default: 1)'
         in: query
@@ -2306,8 +2358,8 @@ paths:
       tags:
       - Transactions
     post:
-      description: Creates a transaction; bulan_realisasi and the management-fee fields
-        are computed server-side from the project's fee rate
+      description: Creates a transaction; bulan_realisasi is computed server-side
+        from tanggal_transaksi
       parameters:
       - description: Transaction details
         in: body
@@ -2428,6 +2480,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a transaction
+      tags:
+      - Transactions
+  /api/transactions/import:
+    post:
+      consumes:
+      - application/json
+      description: Validates every row first; if any row is invalid nothing is saved
+        and all errors are returned (422). Transactions have no natural key, so every
+        row creates a new transaction.
+      parameters:
+      - description: 'rows: list of transaction rows (see template)'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: total, created, updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid body or too many rows
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Validation errors per row
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import transactions from Excel rows
       tags:
       - Transactions
   /api/upload/{resource}/{field}/{id}:

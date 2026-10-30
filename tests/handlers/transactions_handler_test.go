@@ -39,17 +39,15 @@ func TestCreateTransaction(t *testing.T) {
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("sets bulan_realisasi (YYYY-MM) and both management-fee fields together", func(t *testing.T) {
+	t.Run("sets bulan_realisasi (YYYY-MM) from tanggal_transaksi", func(t *testing.T) {
 		mock := testutil.SetupMockDB(t)
 		projectID := uuid.New()
 		costTypeID := uuid.New()
-		tarif := 10.0
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
 			WithArgs(projectID.String()).
-			WillReturnRows(sqlmock.NewRows([]string{
-				"id", "no_sp2k", "tanggal_mulai", "nilai_pekerjaan", "tarif_management_fee_persen", "status_kontrak",
-			}).AddRow(projectID, "SP2K-001", "2024-01-01", 1_000_000_000.0, tarif, "Active"))
+			WillReturnRows(sqlmock.NewRows([]string{"id", "no_sp2k", "tanggal_mulai", "tanggal_selesai", "nilai_pekerjaan"}).
+				AddRow(projectID, "SP2K-001", "2024-01-01", "2024-12-31", 1_000_000_000.0))
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "cost_types" WHERE id = $1`)).
 			WithArgs(costTypeID.String()).
@@ -78,50 +76,8 @@ func TestCreateTransaction(t *testing.T) {
 		var created map[string]any
 		json.Unmarshal(respBody, &created)
 		assert.Equal(t, "2024-03", created["bulan_realisasi"])
-		assert.Equal(t, 10.0, created["persentase_management_fee"])
-		assert.Equal(t, 50_000_000.0, created["nilai_management_fee"])
-		assert.Equal(t, "no_data", created["sla_status"], "no PO date was supplied")
-	})
-
-	t.Run("no PO date resolves sla_status to no_data", func(t *testing.T) {
-		mock := testutil.SetupMockDB(t)
-		projectID := uuid.New()
-		costTypeID := uuid.New()
-
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
-			WithArgs(projectID.String()).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "no_sp2k", "tanggal_mulai", "nilai_pekerjaan", "status_kontrak"}).
-				AddRow(projectID, "SP2K-001", "2024-01-01", 1_000_000_000.0, "Active"))
-
-		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "cost_types" WHERE id = $1`)).
-			WithArgs(costTypeID.String()).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "nama_biaya"}).AddRow(costTypeID, "Gaji & Tunjangan"))
-
-		mock.ExpectBegin()
-		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "transactions"`)).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
-				AddRow(uuid.New(), time.Now(), time.Now()))
-		mock.ExpectCommit()
-
-		reqBody := map[string]any{
-			"project_id":        projectID.String(),
-			"cost_type_id":      costTypeID.String(),
-			"tanggal_transaksi": "2024-03-15",
-			"jumlah_realisasi":  500_000.0,
-		}
-		body, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest("POST", "/transactions", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, _ := app.Test(req)
-		respBody, _ := io.ReadAll(resp.Body)
-		assert.Equal(t, fiber.StatusCreated, resp.StatusCode, string(respBody))
-
-		var created map[string]any
-		json.Unmarshal(respBody, &created)
-		assert.Equal(t, "no_data", created["sla_status"])
-		assert.Nil(t, created["persentase_management_fee"])
-		assert.Nil(t, created["nilai_management_fee"])
+		assert.NotContains(t, created, "nilai_management_fee")
+		assert.NotContains(t, created, "sla_status")
 	})
 }
 
