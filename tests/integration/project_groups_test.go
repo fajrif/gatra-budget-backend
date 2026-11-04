@@ -269,3 +269,75 @@ func toStrings(v any) []string {
 	}
 	return out
 }
+
+func TestInvoiceListFiltersByProjectGroupAndYear(t *testing.T) {
+	tx := withTx(t)
+	a := groupsApp()
+
+	groupA := models.ProjectGroup{Nama: "Group A"}
+	groupB := models.ProjectGroup{Nama: "Group B"}
+	for _, g := range []*models.ProjectGroup{&groupA, &groupB} {
+		if err := tx.Create(g).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	pA1, _ := newTestProject(t, tx)
+	pA2, _ := newTestProject(t, tx)
+	pB, _ := newTestProject(t, tx)
+	pNone, _ := newTestProject(t, tx)
+	tx.Model(&models.Project{}).Where("id IN ?", []any{pA1.ID, pA2.ID}).Update("project_group_id", groupA.ID)
+	tx.Model(&models.Project{}).Where("id = ?", pB.ID).Update("project_group_id", groupB.ID)
+
+	create := func(project models.Project, no, tgl string) {
+		inv := newInvoice(t, project.ID, no)
+		inv.TglTagihan = models.Date{Time: mustParseDate(t, tgl)}
+		if err := tx.Create(&inv).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	create(pA1, "F-A1-2026", "2026-02-10")
+	create(pA2, "F-A2-2026", "2026-03-10")
+	create(pA2, "F-A2-2025", "2025-12-10")
+	create(pB, "F-B-2026", "2026-02-11")
+	create(pNone, "F-N-2026", "2026-02-12")
+
+	list := func(query string) []string {
+		resp := doJSON(t, a, "GET", "/invoices?all=true"+query, "")
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET %s: %d: %s", query, resp.StatusCode, readRawBody(t, resp))
+		}
+		var nos []string
+		for _, v := range readBody(t, resp)["invoices"].([]any) {
+			nos = append(nos, v.(map[string]any)["no_invoice"].(string))
+		}
+		return nos
+	}
+	sameSet := func(got []string, want ...string) {
+		t.Helper()
+		if len(got) != len(want) {
+			t.Errorf("got %v, want %v", got, want)
+			return
+		}
+		seen := map[string]bool{}
+		for _, g := range got {
+			seen[g] = true
+		}
+		for _, w := range want {
+			if !seen[w] {
+				t.Errorf("got %v, want %v", got, want)
+				return
+			}
+		}
+	}
+
+	sameSet(list("&project_group_id="+groupA.ID.String()), "F-A1-2026", "F-A2-2026", "F-A2-2025")
+	sameSet(list("&project_group_id="+groupA.ID.String()+"&year=2026"), "F-A1-2026", "F-A2-2026")
+	sameSet(list("&project_group_id="+groupA.ID.String()+"&year=2025"), "F-A2-2025")
+	sameSet(list("&project_group_id="+groupB.ID.String()), "F-B-2026")
+	sameSet(list("&year=2026"), "F-A1-2026", "F-A2-2026", "F-B-2026", "F-N-2026")
+	sameSet(list("&project_id="+pNone.ID.String()+"&year=2026"), "F-N-2026")
+
+	if resp := doJSON(t, a, "GET", "/invoices?year=26", ""); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("year=26: expected 400, got %d", resp.StatusCode)
+	}
+}

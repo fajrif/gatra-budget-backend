@@ -1952,6 +1952,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Filter by project group ID (UUID): invoices of every project in the group",
+                        "name": "project_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tgl_tagihan year (YYYY)",
+                        "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Search by no_invoice or nama_invoice",
                         "name": "search",
                         "in": "query"
@@ -1978,6 +1990,13 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "List of invoices with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid year",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true

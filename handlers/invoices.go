@@ -138,6 +138,8 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 	return nil
 }
 
+var yearPattern = regexp.MustCompile(`^\d{4}$`)
+
 // GetAllInvoices godoc
 // @Summary Get all invoices
 // @Description Retrieve invoices, optionally filtered by project, status or billing month, with pagination
@@ -150,11 +152,14 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 // @Param month query string false "Filter by tgl_tagihan month (YYYY-MM)"
 // @Param metode_pembayaran query string false "Filter by payment method (Kontrak, SPR)"
 // @Param periode query string false "Filter by billing period month (YYYY-MM)"
+// @Param project_group_id query string false "Filter by project group ID (UUID): invoices of every project in the group"
+// @Param year query string false "Filter by tgl_tagihan year (YYYY)"
 // @Param search query string false "Search by no_invoice or nama_invoice"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
 // @Success 200 {object} map[string]any "List of invoices with pagination"
+// @Failure 400 {object} map[string]any "Invalid year"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/invoices [get]
@@ -192,6 +197,20 @@ func GetAllInvoices(c *fiber.Ctx) error {
 	if periode := c.Query("periode"); periode != "" {
 		query = query.Where("? = ANY(periode_tagihan)", periode)
 		queryCount = queryCount.Where("? = ANY(periode_tagihan)", periode)
+	}
+
+	if groupID := c.Query("project_group_id"); groupID != "" {
+		cond := "project_id IN (SELECT id FROM projects WHERE project_group_id = ?)"
+		query = query.Where(cond, groupID)
+		queryCount = queryCount.Where(cond, groupID)
+	}
+
+	if year := c.Query("year"); year != "" {
+		if !yearPattern.MatchString(year) {
+			return fiber.NewError(fiber.StatusBadRequest, "year harus berformat YYYY")
+		}
+		query = query.Where("to_char(tgl_tagihan, 'YYYY') = ?", year)
+		queryCount = queryCount.Where("to_char(tgl_tagihan, 'YYYY') = ?", year)
 	}
 
 	if search := c.Query("search"); search != "" {
