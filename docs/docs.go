@@ -1928,7 +1928,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by status (Submit, Clearing)",
+                        "description": "Filter by status (Submit, Kliring)",
                         "name": "status",
                         "in": "query"
                     },
@@ -3417,7 +3417,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.",
+                "description": "Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.",
                 "tags": [
                     "Reports"
                 ],

@@ -27,14 +27,14 @@ type InvoiceImportRow struct {
 	Description  string `json:"description"`
 }
 
-// canonicalInvoiceStatus lets the template accept "submit"/"CLEARING" in any
+// canonicalInvoiceStatus lets the template accept "submit"/"KLIRING" in any
 // case; unknown values are left as typed so the validator reports them.
 func canonicalInvoiceStatus(s string) string {
 	switch strings.ToLower(s) {
 	case "submit":
 		return models.InvoiceStatusSubmit
-	case "clearing":
-		return models.InvoiceStatusClearing
+	case "kliring", "clearing": // "clearing" = old template spelling
+		return models.InvoiceStatusKliring
 	}
 	return s
 }

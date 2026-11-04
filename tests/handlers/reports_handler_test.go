@@ -28,7 +28,7 @@ var projectColumns = []string{
 
 // invoiceTotalColumns are the columns of the grouped per-project invoice query.
 var invoiceTotalColumns = []string{
-	"project_id", "total_invoice", "total_clearing", "total_outstanding", "total_fee",
+	"project_id", "total_invoice", "total_kliring", "total_outstanding", "total_fee",
 }
 
 const (
@@ -89,7 +89,7 @@ func TestGetProjectsSummaryReport(t *testing.T) {
 	assert.Equal(t, 85.0, s["absorption_pct"])
 	assert.Equal(t, true, s["absorption_alert"], "85% is above the 80% threshold")
 	assert.Equal(t, 300_000_000.0, s["total_invoice"])
-	assert.Equal(t, 200_000_000.0, s["total_clearing"])
+	assert.Equal(t, 200_000_000.0, s["total_kliring"])
 	assert.Equal(t, 100_000_000.0, s["total_outstanding"])
 	assert.Equal(t, 30_000_000.0, s["profit_margin"], "sum of invoice manajemen_fee")
 	assert.Equal(t, s["total_manajemen_fee"], s["profit_margin"])

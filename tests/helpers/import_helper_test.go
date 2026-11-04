@@ -40,7 +40,7 @@ func TestTranslateValidationMessage(t *testing.T) {
 	}{
 		{"no_sp2k is required", "no_sp2k", "wajib diisi"},
 		{"nilai must be greater than 0", "nilai", "harus lebih dari 0"},
-		{"tgl_bayar is required when status is Clearing", "tgl_bayar", "wajib diisi bila status Clearing"},
+		{"tgl_bayar is required when status is Kliring", "tgl_bayar", "wajib diisi bila status Kliring"},
 		{"invalid tanggal_mulai: invalid date format, expected YYYY-MM-DD", "tanggal_mulai", "format tanggal tidak valid, gunakan YYYY-MM-DD"},
 		{"tanggal_selesai harus setelah tanggal_mulai", "tanggal_selesai", "harus setelah tanggal_mulai"},
 		{"manajemen_fee tidak boleh melebihi nilai", "manajemen_fee", "tidak boleh melebihi nilai"},

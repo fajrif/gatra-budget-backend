@@ -47,8 +47,8 @@ func ParseImportCount(s string) (int, bool) {
 var validationMessages = map[string]string{
 	"jumlah_realisasi is required and must be greater than 100,000": "harus lebih dari 100.000",
 	"nilai must be greater than 0":                                  "harus lebih dari 0",
-	"status must be 'Submit' or 'Clearing'":                         "harus 'Submit' atau 'Clearing'",
-	"tgl_bayar is required when status is Clearing":                 "wajib diisi bila status Clearing",
+	"status must be 'Submit' or 'Kliring'":                          "harus 'Submit' atau 'Kliring'",
+	"tgl_bayar is required when status is Kliring":                  "wajib diisi bila status Kliring",
 	"tgl_bayar must be empty when status is Submit":                 "harus kosong bila status Submit",
 	"manajemen_fee must not be negative":                            "tidak boleh negatif",
 }

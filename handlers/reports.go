@@ -31,7 +31,7 @@ type ProjectSummary struct {
 	AbsorptionPct     float64   `json:"absorption_pct"`
 	AbsorptionAlert   bool      `json:"absorption_alert"`
 	TotalInvoice      float64   `json:"total_invoice"`
-	TotalClearing     float64   `json:"total_clearing"`
+	TotalKliring      float64   `json:"total_kliring"`
 	TotalOutstanding  float64   `json:"total_outstanding"`
 	TotalManajemenFee float64   `json:"total_manajemen_fee"`
 	ProfitMargin      float64   `json:"profit_margin"`
@@ -70,7 +70,7 @@ type realisasiTotal struct {
 type invoiceTotal struct {
 	ProjectID        uuid.UUID
 	TotalInvoice     float64
-	TotalClearing    float64
+	TotalKliring     float64
 	TotalOutstanding float64
 	TotalFee         float64
 }
@@ -118,7 +118,7 @@ func projectInvoiceTotals(db *gorm.DB, projectIDs []uuid.UUID) (map[uuid.UUID]in
 	err := db.Model(&models.Invoice{}).
 		Select(`project_id,
 			COALESCE(SUM(nilai), 0) AS total_invoice,
-			COALESCE(SUM(nilai) FILTER (WHERE status = 'Clearing'), 0) AS total_clearing,
+			COALESCE(SUM(nilai) FILTER (WHERE status = 'Kliring'), 0) AS total_kliring,
 			COALESCE(SUM(nilai) FILTER (WHERE status = 'Submit'), 0) AS total_outstanding,
 			COALESCE(SUM(manajemen_fee), 0) AS total_fee`).
 		Where("project_id IN ?", projectIDs).
@@ -150,7 +150,7 @@ func buildProjectSummary(p models.Project, totalRealisasi float64, inv invoiceTo
 		AbsorptionPct:     absorptionPct,
 		AbsorptionAlert:   absorptionAlert,
 		TotalInvoice:      inv.TotalInvoice,
-		TotalClearing:     inv.TotalClearing,
+		TotalKliring:      inv.TotalKliring,
 		TotalOutstanding:  inv.TotalOutstanding,
 		TotalManajemenFee: inv.TotalFee,
 		ProfitMargin:      inv.TotalFee,
@@ -263,7 +263,7 @@ func monthTotals(q *gorm.DB) (map[string]float64, error) {
 
 // GetMonthlyReport godoc
 // @Summary Get the monthly expense and invoice report (admin only)
-// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.
+// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.
 // @Tags Reports
 // @Security BearerAuth
 // @Param year query int false "Year (default: current year)"
@@ -322,7 +322,7 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 
 	penerimaan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
 		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai), 0) AS total").
-		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusClearing, prefix).
+		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
 		Group("to_char(tgl_bayar, 'YYYY-MM')"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
@@ -330,7 +330,7 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 
 	fee, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
 		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(manajemen_fee), 0) AS total").
-		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusClearing, prefix).
+		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
 		Group("to_char(tgl_bayar, 'YYYY-MM')"))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})

@@ -1641,7 +1641,7 @@ paths:
         in: query
         name: project_id
         type: string
-      - description: Filter by status (Submit, Clearing)
+      - description: Filter by status (Submit, Kliring)
         in: query
         name: status
         type: string
@@ -2620,7 +2620,7 @@ paths:
   /api/reports/monthly:
     get:
       description: 'Twelve months of one year: expenses (transactions by bulan_realisasi),
-        billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices
+        billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices
         by tgl_bayar), and received minus total expenses (project + operational).
         Operational expenses (cost_operations) are included only when no project_id
         filter is given.'

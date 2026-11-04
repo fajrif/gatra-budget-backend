@@ -61,10 +61,10 @@ func TestCreateInvoiceValidation(t *testing.T) {
 		{"missing tgl_tagihan", map[string]any{"tgl_tagihan": nil}},
 		{"zero nilai", map[string]any{"nilai": 0.0}},
 		{"unknown status", map[string]any{"status": "Paid"}},
-		{"Clearing without tgl_bayar", map[string]any{"status": "Clearing"}},
+		{"Kliring without tgl_bayar", map[string]any{"status": "Kliring"}},
 		{"Submit with tgl_bayar", map[string]any{"tgl_bayar": "2026-10-20"}},
-		{"tgl_bayar on the billing date", map[string]any{"status": "Clearing", "tgl_bayar": "2026-10-01"}},
-		{"tgl_bayar before tgl_tagihan", map[string]any{"status": "Clearing", "tgl_bayar": "2026-09-30"}},
+		{"tgl_bayar on the billing date", map[string]any{"status": "Kliring", "tgl_bayar": "2026-10-01"}},
+		{"tgl_bayar before tgl_tagihan", map[string]any{"status": "Kliring", "tgl_bayar": "2026-09-30"}},
 		{"negative fee", map[string]any{"manajemen_fee": -1.0}},
 		{"fee above nilai", map[string]any{"manajemen_fee": 200_000_000.0}},
 	}
@@ -80,7 +80,7 @@ func TestCreateInvoice(t *testing.T) {
 	app := setupApp()
 	app.Post("/invoices", handlers.CreateInvoice)
 
-	t.Run("creates a Clearing invoice with its payment date", func(t *testing.T) {
+	t.Run("creates a Kliring invoice with its payment date", func(t *testing.T) {
 		mock := testutil.SetupMockDB(t)
 		projectID := uuid.New()
 
@@ -98,7 +98,7 @@ func TestCreateInvoice(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/invoices", invoiceBody(map[string]any{
 			"project_id": projectID.String(),
-			"status":     "Clearing",
+			"status":     "Kliring",
 			"tgl_bayar":  "2026-10-20",
 		}))
 		req.Header.Set("Content-Type", "application/json")
@@ -108,7 +108,7 @@ func TestCreateInvoice(t *testing.T) {
 
 		var created map[string]any
 		json.Unmarshal(respBody, &created)
-		assert.Equal(t, "Clearing", created["status"])
+		assert.Equal(t, "Kliring", created["status"])
 		assert.Equal(t, "2026-10-20", created["tgl_bayar"])
 		assert.Equal(t, 5_000_000.0, created["manajemen_fee"])
 	})

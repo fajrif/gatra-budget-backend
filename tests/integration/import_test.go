@@ -199,10 +199,10 @@ func TestImportInvoices(t *testing.T) {
 		fee := row(3, "INV-X2")
 		fee["manajemen_fee"] = "200000000"
 		paidBefore := row(4, "INV-X3")
-		paidBefore["status"] = "Clearing"
+		paidBefore["status"] = "Kliring"
 		paidBefore["tgl_bayar"] = "2026-09-01"
-		clearingNoDate := row(5, "INV-X4")
-		clearingNoDate["status"] = "Clearing"
+		kliringNoDate := row(5, "INV-X4")
+		kliringNoDate["status"] = "Kliring"
 		submitWithDate := row(6, "INV-X5")
 		submitWithDate["tgl_bayar"] = "2026-10-20"
 		badStatus := row(7, "INV-X6")
@@ -210,7 +210,7 @@ func TestImportInvoices(t *testing.T) {
 		dup := row(8, "INV-X1")
 
 		status, body := postImport(t, a, "/invoices/import",
-			[]map[string]any{row(2, "INV-X1"), fee, paidBefore, clearingNoDate, submitWithDate, badStatus, dup})
+			[]map[string]any{row(2, "INV-X1"), fee, paidBefore, kliringNoDate, submitWithDate, badStatus, dup})
 		if status != http.StatusUnprocessableEntity {
 			t.Fatalf("expected 422, got %d: %v", status, body)
 		}
@@ -229,7 +229,7 @@ func TestImportInvoices(t *testing.T) {
 
 	t.Run("creates, then updates by no_invoice", func(t *testing.T) {
 		paid := row(3, "INV-OK-2")
-		paid["status"] = "CLEARING"
+		paid["status"] = "KLIRING"
 		paid["tgl_bayar"] = "2026-10-20"
 
 		status, body := postImport(t, a, "/invoices/import", []map[string]any{row(2, "INV-OK-1"), paid})
@@ -249,10 +249,10 @@ func TestImportInvoices(t *testing.T) {
 		if inv.Nilai != 150_000_000 {
 			t.Fatalf("expected updated nilai, got %v", inv.Nilai)
 		}
-		var clearing models.Invoice
-		tx.Where("no_invoice = ?", "INV-OK-2").First(&clearing)
-		if clearing.Status != models.InvoiceStatusClearing || clearing.TglBayar == nil {
-			t.Fatalf("expected Clearing with tgl_bayar, got %+v", clearing)
+		var kliring models.Invoice
+		tx.Where("no_invoice = ?", "INV-OK-2").First(&kliring)
+		if kliring.Status != models.InvoiceStatusKliring || kliring.TglBayar == nil {
+			t.Fatalf("expected Kliring with tgl_bayar, got %+v", kliring)
 		}
 	})
 }

@@ -125,7 +125,7 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 	bayar := models.Date{Time: mustParseDate(t, "2026-02-20")}
 	for _, inv := range []models.Invoice{
 		{NoInvoice: "INV-R-1", NamaInvoice: "Termin 1", TglTagihan: models.Date{Time: mustParseDate(t, "2026-01-10")},
-			TglBayar: &bayar, Status: models.InvoiceStatusClearing, Nilai: 500_000_000, ManajemenFee: 40_000_000},
+			TglBayar: &bayar, Status: models.InvoiceStatusKliring, Nilai: 500_000_000, ManajemenFee: 40_000_000},
 		{NoInvoice: "INV-R-2", NamaInvoice: "Termin 2", TglTagihan: models.Date{Time: mustParseDate(t, "2026-02-10")},
 			Status: models.InvoiceStatusSubmit, Nilai: 300_000_000, ManajemenFee: 20_000_000},
 	} {
@@ -153,7 +153,7 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 			t.Fatalf("expected absorption_alert at 85%%, got %v", summary["absorption_alert"])
 		}
 		assertFloat(t, summary, "total_invoice", 800_000_000)
-		assertFloat(t, summary, "total_clearing", 500_000_000)
+		assertFloat(t, summary, "total_kliring", 500_000_000)
 		assertFloat(t, summary, "total_outstanding", 300_000_000)
 		assertFloat(t, summary, "profit_margin", 60_000_000)
 	})
@@ -179,7 +179,7 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 		assertFloat(t, feb, "pengeluaran", 450_000_000)
 		assertFloat(t, feb, "tagihan", 300_000_000)
 		assertFloat(t, feb, "penerimaan", 500_000_000)
-		assertFloat(t, feb, "manajemen_fee", 40_000_000) // only the Clearing invoice's fee
+		assertFloat(t, feb, "manajemen_fee", 40_000_000) // only the Kliring invoice's fee
 		assertFloat(t, feb, "selisih", 50_000_000)
 
 		totals := body["totals"].(map[string]any)

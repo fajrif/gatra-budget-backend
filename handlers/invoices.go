@@ -9,7 +9,7 @@ import (
 )
 
 // ValidateInvoiceRequest validates the invoice request fields. The tgl_bayar
-// rule mirrors the database CHECK: a Clearing (paid) invoice must have a
+// rule mirrors the database CHECK: a Kliring (paid) invoice must have a
 // payment date, and a Submit invoice must not.
 func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 	if req.NoInvoice == "" {
@@ -27,13 +27,13 @@ func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 	if req.Nilai <= 0 {
 		return fiber.NewError(fiber.StatusBadRequest, "nilai must be greater than 0")
 	}
-	if req.Status != models.InvoiceStatusSubmit && req.Status != models.InvoiceStatusClearing {
-		return fiber.NewError(fiber.StatusBadRequest, "status must be 'Submit' or 'Clearing'")
+	if req.Status != models.InvoiceStatusSubmit && req.Status != models.InvoiceStatusKliring {
+		return fiber.NewError(fiber.StatusBadRequest, "status must be 'Submit' or 'Kliring'")
 	}
 
 	hasTglBayar := req.TglBayar != nil && *req.TglBayar != ""
-	if req.Status == models.InvoiceStatusClearing && !hasTglBayar {
-		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar is required when status is Clearing")
+	if req.Status == models.InvoiceStatusKliring && !hasTglBayar {
+		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar is required when status is Kliring")
 	}
 	if req.Status == models.InvoiceStatusSubmit && hasTglBayar {
 		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar must be empty when status is Submit")
@@ -93,7 +93,7 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 // @Produce json
 // @Security BearerAuth
 // @Param project_id query string false "Filter by project ID (UUID)"
-// @Param status query string false "Filter by status (Submit, Clearing)"
+// @Param status query string false "Filter by status (Submit, Kliring)"
 // @Param month query string false "Filter by tgl_tagihan month (YYYY-MM)"
 // @Param search query string false "Search by no_invoice or nama_invoice"
 // @Param page query int false "Page number (default: 1)"

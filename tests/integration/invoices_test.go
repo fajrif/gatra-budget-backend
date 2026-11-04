@@ -49,7 +49,7 @@ func TestInvoiceCheckConstraints(t *testing.T) {
 		name   string
 		mutate func(*models.Invoice)
 	}{
-		{"Clearing without tgl_bayar", func(i *models.Invoice) { i.Status = models.InvoiceStatusClearing }},
+		{"Kliring without tgl_bayar", func(i *models.Invoice) { i.Status = models.InvoiceStatusKliring }},
 		{"Submit with tgl_bayar", func(i *models.Invoice) { i.TglBayar = &bayar }},
 		{"fee above nilai", func(i *models.Invoice) { i.ManajemenFee = i.Nilai + 1 }},
 		{"unknown status", func(i *models.Invoice) { i.Status = "Paid" }},
@@ -88,7 +88,7 @@ func TestInvoiceProjectCascadeDeletesInvoices(t *testing.T) {
 }
 
 // TestInvoiceCreateAndClearAgainstRealDB runs the real handler through a
-// Submit -> Clearing transition.
+// Submit -> Kliring transition.
 func TestInvoiceCreateAndClearAgainstRealDB(t *testing.T) {
 	tx := withTx(t)
 	project, _ := newTestProject(t, tx)
@@ -108,13 +108,13 @@ func TestInvoiceCreateAndClearAgainstRealDB(t *testing.T) {
 	}
 	id := readBody(t, resp)["id"].(string)
 
-	resp = doJSON(t, a, "PUT", "/invoices/"+id, payload("Clearing", `,"tgl_bayar":"2026-10-25"`))
+	resp = doJSON(t, a, "PUT", "/invoices/"+id, payload("Kliring", `,"tgl_bayar":"2026-10-25"`))
 	if resp.StatusCode != 200 {
-		t.Fatalf("expected 200 clearing the invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
+		t.Fatalf("expected 200 kliring the invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
 	}
 	updated := readBody(t, resp)
-	if updated["status"] != "Clearing" || updated["tgl_bayar"] != "2026-10-25" {
-		t.Fatalf("expected Clearing with tgl_bayar, got %v / %v", updated["status"], updated["tgl_bayar"])
+	if updated["status"] != "Kliring" || updated["tgl_bayar"] != "2026-10-25" {
+		t.Fatalf("expected Kliring with tgl_bayar, got %v / %v", updated["status"], updated["tgl_bayar"])
 	}
 
 	// Re-using the same number on a different invoice is a 409, not a 500.

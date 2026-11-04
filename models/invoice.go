@@ -6,10 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Invoice statuses. Clearing means the invoice has been paid.
+// Invoice statuses. Kliring means the invoice has been paid.
 const (
-	InvoiceStatusSubmit   = "Submit"
-	InvoiceStatusClearing = "Clearing"
+	InvoiceStatusSubmit  = "Submit"
+	InvoiceStatusKliring = "Kliring"
 )
 
 type Invoice struct {
