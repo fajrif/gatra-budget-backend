@@ -39,21 +39,25 @@ type ProjectSummary struct {
 
 // MonthlyReportRow is one calendar month of the monthly report.
 type MonthlyReportRow struct {
-	Month        string  `json:"month"`
-	Pengeluaran  float64 `json:"pengeluaran"`
-	Tagihan      float64 `json:"tagihan"`
-	Penerimaan   float64 `json:"penerimaan"`
-	ManajemenFee float64 `json:"manajemen_fee"`
-	Selisih      float64 `json:"selisih"`
+	Month            string  `json:"month"`
+	Pengeluaran      float64 `json:"pengeluaran"`       // project expenses (transactions)
+	Operasional      float64 `json:"operasional"`       // operational expenses (cost_operations)
+	TotalPengeluaran float64 `json:"total_pengeluaran"` // pengeluaran + operasional
+	Tagihan          float64 `json:"tagihan"`
+	Penerimaan       float64 `json:"penerimaan"`
+	ManajemenFee     float64 `json:"manajemen_fee"`
+	Selisih          float64 `json:"selisih"` // penerimaan - total_pengeluaran
 }
 
 // MonthlyReportTotals sums the twelve months of the report.
 type MonthlyReportTotals struct {
-	Pengeluaran  float64 `json:"pengeluaran"`
-	Tagihan      float64 `json:"tagihan"`
-	Penerimaan   float64 `json:"penerimaan"`
-	ManajemenFee float64 `json:"manajemen_fee"`
-	Selisih      float64 `json:"selisih"`
+	Pengeluaran      float64 `json:"pengeluaran"`
+	Operasional      float64 `json:"operasional"`
+	TotalPengeluaran float64 `json:"total_pengeluaran"`
+	Tagihan          float64 `json:"tagihan"`
+	Penerimaan       float64 `json:"penerimaan"`
+	ManajemenFee     float64 `json:"manajemen_fee"`
+	Selisih          float64 `json:"selisih"`
 }
 
 // realisasiTotal is one GROUP BY result row from transactions.
@@ -259,7 +263,7 @@ func monthTotals(q *gorm.DB) (map[string]float64, error) {
 
 // GetMonthlyReport godoc
 // @Summary Get the monthly expense and invoice report (admin only)
-// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices by tgl_bayar), and received minus expenses. Optionally scoped to one project.
+// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.
 // @Tags Reports
 // @Security BearerAuth
 // @Param year query int false "Year (default: current year)"
@@ -296,6 +300,18 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate transactions"})
 	}
 
+	// Operational expenses belong to no project, so a project filter excludes them.
+	operasional := map[string]float64{}
+	if projectID == "" {
+		operasional, err = monthTotals(config.DB.Model(&models.CostOperation{}).
+			Select("bulan_realisasi AS month, COALESCE(SUM(jumlah), 0) AS total").
+			Where("bulan_realisasi LIKE ?", prefix).
+			Group("bulan_realisasi"))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate cost operations"})
+		}
+	}
+
 	tagihan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
 		Select("to_char(tgl_tagihan, 'YYYY-MM') AS month, COALESCE(SUM(nilai), 0) AS total").
 		Where("to_char(tgl_tagihan, 'YYYY-MM') LIKE ?", prefix).
@@ -324,17 +340,22 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 	var totals MonthlyReportTotals
 	for m := 1; m <= 12; m++ {
 		key := time.Date(year, time.Month(m), 1, 0, 0, 0, 0, time.UTC).Format("2006-01")
+		total := pengeluaran[key] + operasional[key]
 		row := MonthlyReportRow{
-			Month:        key,
-			Pengeluaran:  pengeluaran[key],
-			Tagihan:      tagihan[key],
-			Penerimaan:   penerimaan[key],
-			ManajemenFee: fee[key],
-			Selisih:      penerimaan[key] - pengeluaran[key],
+			Month:            key,
+			Pengeluaran:      pengeluaran[key],
+			Operasional:      operasional[key],
+			TotalPengeluaran: total,
+			Tagihan:          tagihan[key],
+			Penerimaan:       penerimaan[key],
+			ManajemenFee:     fee[key],
+			Selisih:          penerimaan[key] - total,
 		}
 		rows = append(rows, row)
 
 		totals.Pengeluaran += row.Pengeluaran
+		totals.Operasional += row.Operasional
+		totals.TotalPengeluaran += row.TotalPengeluaran
 		totals.Tagihan += row.Tagihan
 		totals.Penerimaan += row.Penerimaan
 		totals.ManajemenFee += row.ManajemenFee
@@ -342,4 +363,50 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"year": year, "rows": rows, "totals": totals})
+}
+
+// OperationalSummaryRow is one operational cost type's total for the year.
+type OperationalSummaryRow struct {
+	OperationalCostTypeID uuid.UUID `json:"operational_cost_type_id"`
+	NamaBiaya             string    `json:"nama_biaya"`
+	Total                 float64   `json:"total"`
+}
+
+// GetOperationalSummaryReport godoc
+// @Summary Get operational expense totals per cost type for a year (admin only)
+// @Tags Reports
+// @Security BearerAuth
+// @Param year query int false "Year (default: current year)"
+// @Success 200 {object} map[string]any "Totals per operational cost type"
+// @Failure 400 {object} map[string]any "Invalid year"
+// @Failure 403 {object} map[string]any "Admin access required"
+// @Failure 500 {object} map[string]any "Internal server error"
+// @Router /api/reports/operational-summary [get]
+func GetOperationalSummaryReport(c *fiber.Ctx) error {
+	year := time.Now().Year()
+	if y := c.Query("year"); y != "" {
+		parsed, err := strconv.Atoi(y)
+		if err != nil || parsed < 2000 || parsed > 2100 {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "year must be between 2000 and 2100"})
+		}
+		year = parsed
+	}
+
+	rows := []OperationalSummaryRow{}
+	err := config.DB.Table("cost_operations AS co").
+		Select("co.operational_cost_type_id, t.nama_biaya, COALESCE(SUM(co.jumlah), 0) AS total").
+		Joins("JOIN operational_cost_types t ON t.id = co.operational_cost_type_id").
+		Where("co.bulan_realisasi LIKE ?", strconv.Itoa(year)+"-%").
+		Group("co.operational_cost_type_id, t.nama_biaya").
+		Order("total DESC").
+		Scan(&rows).Error
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate cost operations"})
+	}
+
+	var total float64
+	for _, r := range rows {
+		total += r.Total
+	}
+	return c.JSON(fiber.Map{"year": year, "rows": rows, "total": total})
 }

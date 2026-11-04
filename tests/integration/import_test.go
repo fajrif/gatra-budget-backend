@@ -17,6 +17,7 @@ func importApp() *fiber.App {
 	a.Post("/projects/import", handlers.ImportProjects)
 	a.Post("/transactions/import", handlers.ImportTransactions)
 	a.Post("/invoices/import", handlers.ImportInvoices)
+	a.Post("/cost-operations/import", handlers.ImportCostOperations)
 	return a
 }
 
@@ -252,6 +253,60 @@ func TestImportInvoices(t *testing.T) {
 		tx.Where("no_invoice = ?", "INV-OK-2").First(&clearing)
 		if clearing.Status != models.InvoiceStatusClearing || clearing.TglBayar == nil {
 			t.Fatalf("expected Clearing with tgl_bayar, got %+v", clearing)
+		}
+	})
+}
+
+func TestImportCostOperations(t *testing.T) {
+	tx := withTx(t)
+	opType := models.OperationalCostType{NamaBiaya: "Konsumsi Import"}
+	if err := tx.Create(&opType).Error; err != nil {
+		t.Fatal(err)
+	}
+	a := importApp()
+
+	row := func(n int) map[string]any {
+		return map[string]any{
+			"row": n, "operational_cost_type": " konsumsi import ",
+			"tanggal_transaksi": "2026-03-15", "jumlah": "250000", "deskripsi": "Makan siang",
+		}
+	}
+
+	t.Run("reports every bad row without saving", func(t *testing.T) {
+		before := countRows(t, &models.CostOperation{})
+		a1 := row(3)
+		a1["operational_cost_type"] = "Tidak Ada"
+		a2 := row(4)
+		a2["jumlah"] = "50000" // below the 100,000 minimum
+		a3 := row(5)
+		a3["jumlah"] = "abc"
+		a4 := row(6)
+		a4["tanggal_transaksi"] = ""
+
+		status, body := postImport(t, a, "/cost-operations/import", []map[string]any{row(2), a1, a2, a3, a4})
+		if status != http.StatusUnprocessableEntity {
+			t.Fatalf("expected 422, got %d: %v", status, body)
+		}
+		errs := importErrorsOf(t, body)
+		for _, key := range []string{"3:operational_cost_type", "4:jumlah", "5:jumlah", "6:tanggal_transaksi"} {
+			if _, ok := errs[key]; !ok {
+				t.Errorf("expected an error for %s, got %v", key, errs)
+			}
+		}
+		if after := countRows(t, &models.CostOperation{}); after != before {
+			t.Fatalf("a failed import must save nothing: %d -> %d", before, after)
+		}
+	})
+
+	t.Run("every row creates a record with a server-computed month", func(t *testing.T) {
+		status, body := postImport(t, a, "/cost-operations/import", []map[string]any{row(2), row(3)})
+		if status != http.StatusOK || body["created"] != float64(2) {
+			t.Fatalf("expected 2 created, got %d: %v", status, body)
+		}
+		var saved []models.CostOperation
+		tx.Where("operational_cost_type_id = ?", opType.ID).Find(&saved)
+		if len(saved) != 2 || saved[0].BulanRealisasi == nil || *saved[0].BulanRealisasi != "2026-03" {
+			t.Fatalf("unexpected saved records: %+v", saved)
 		}
 	})
 }

@@ -115,6 +115,40 @@ definitions:
       updated_at:
         type: string
     type: object
+  models.CostOperation:
+    properties:
+      bulan_realisasi:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deskripsi:
+        type: string
+      id:
+        type: string
+      jumlah:
+        type: number
+      operational_cost_type:
+        $ref: '#/definitions/models.OperationalCostType'
+      operational_cost_type_id:
+        type: string
+      tanggal_transaksi:
+        $ref: '#/definitions/models.Date'
+      updated_at:
+        type: string
+    type: object
+  models.CostOperationRequest:
+    properties:
+      deskripsi:
+        type: string
+      jumlah:
+        type: number
+      operational_cost_type_id:
+        type: string
+      tanggal_transaksi:
+        type: string
+    type: object
   models.CostType:
     properties:
       created_at:
@@ -198,6 +232,19 @@ definitions:
       tgl_bayar:
         type: string
       tgl_tagihan:
+        type: string
+    type: object
+  models.OperationalCostType:
+    properties:
+      created_at:
+        type: string
+      deskripsi:
+        type: string
+      id:
+        type: string
+      nama_biaya:
+        type: string
+      updated_at:
         type: string
     type: object
   models.Project:
@@ -1033,6 +1080,215 @@ paths:
       summary: Update a contract type
       tags:
       - ContractTypes
+  /api/cost-operations:
+    get:
+      parameters:
+      - description: Filter by operational cost type ID (UUID)
+        in: query
+        name: operational_cost_type_id
+        type: string
+      - description: Filter by month (YYYY-MM)
+        in: query
+        name: month
+        type: string
+      - description: Search by deskripsi
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: List of cost operations with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid month
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all operational expenses
+      tags:
+      - CostOperations
+    post:
+      description: bulan_realisasi is computed server-side from tanggal_transaksi
+      parameters:
+      - description: Cost operation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CostOperationRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.CostOperation'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Operational cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an operational expense
+      tags:
+      - CostOperations
+  /api/cost-operations/{id}:
+    delete:
+      parameters:
+      - description: Cost operation ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an operational expense
+      tags:
+      - CostOperations
+    get:
+      parameters:
+      - description: Cost operation ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Cost operation details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Cost operation not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an operational expense by ID
+      tags:
+      - CostOperations
+    put:
+      parameters:
+      - description: Cost operation ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CostOperationRequest'
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/models.CostOperation'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an operational expense
+      tags:
+      - CostOperations
+  /api/cost-operations/import:
+    post:
+      consumes:
+      - application/json
+      description: Validates every row first; if any row is invalid nothing is saved
+        and all errors are returned (422). Operational expenses have no natural key,
+        so every row creates a new record.
+      parameters:
+      - description: 'rows: list of operational expense rows (see template)'
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: total, created, updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid body or too many rows
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Validation errors per row
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Import operational expenses from Excel rows
+      tags:
+      - CostOperations
   /api/cost-types:
     get:
       consumes:
@@ -1824,6 +2080,170 @@ paths:
       summary: Update an address of the current user
       tags:
       - Addresses
+  /api/operational-cost-types:
+    get:
+      parameters:
+      - description: Search by nama_biaya
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: List of operational cost types with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all operational cost types
+      tags:
+      - OperationalCostTypes
+    post:
+      parameters:
+      - description: Operational cost type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.OperationalCostType'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.OperationalCostType'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an operational cost type (admin only)
+      tags:
+      - OperationalCostTypes
+  /api/operational-cost-types/{id}:
+    delete:
+      description: Rejected with 409 while cost operations still use it
+      parameters:
+      - description: Operational cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Still in use
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an operational cost type (admin only)
+      tags:
+      - OperationalCostTypes
+    get:
+      parameters:
+      - description: Operational cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Operational cost type details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Operational cost type not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an operational cost type by ID
+      tags:
+      - OperationalCostTypes
+    put:
+      parameters:
+      - description: Operational cost type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.OperationalCostType'
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/models.OperationalCostType'
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an operational cost type (admin only)
+      tags:
+      - OperationalCostTypes
   /api/projects:
     get:
       consumes:
@@ -2201,7 +2621,9 @@ paths:
     get:
       description: 'Twelve months of one year: expenses (transactions by bulan_realisasi),
         billed invoices (by tgl_tagihan), received payments and fees (Clearing invoices
-        by tgl_bayar), and received minus expenses. Optionally scoped to one project.'
+        by tgl_bayar), and received minus total expenses (project + operational).
+        Operational expenses (cost_operations) are included only when no project_id
+        filter is given.'
       parameters:
       - description: 'Year (default: current year)'
         in: query
@@ -2235,6 +2657,39 @@ paths:
       security:
       - BearerAuth: []
       summary: Get the monthly expense and invoice report (admin only)
+      tags:
+      - Reports
+  /api/reports/operational-summary:
+    get:
+      parameters:
+      - description: 'Year (default: current year)'
+        in: query
+        name: year
+        type: integer
+      responses:
+        "200":
+          description: Totals per operational cost type
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid year
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Admin access required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get operational expense totals per cost type for a year (admin only)
       tags:
       - Reports
   /api/reports/projects-summary:

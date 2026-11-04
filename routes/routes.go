@@ -100,6 +100,23 @@ func Setup(app *fiber.App) {
 	projects.Put("/:id", handlers.UpdateProject)
 	projects.Delete("/:id", handlers.DeleteProject)
 
+	// Operational cost types — reads: any user, writes: admin only
+	opCostTypes := api.Group("/operational-cost-types")
+	opCostTypes.Get("/", handlers.GetAllOperationalCostTypes)
+	opCostTypes.Get("/:id", handlers.GetOperationalCostType)
+	opCostTypes.Post("/", middleware.AdminOnly(), handlers.CreateOperationalCostType)
+	opCostTypes.Put("/:id", middleware.AdminOnly(), handlers.UpdateOperationalCostType)
+	opCostTypes.Delete("/:id", middleware.AdminOnly(), handlers.DeleteOperationalCostType)
+
+	// Cost operations (expenses not tied to a project) — full CRUD, any authenticated user
+	costOperations := api.Group("/cost-operations")
+	costOperations.Get("/", handlers.GetAllCostOperations)
+	costOperations.Post("/import", handlers.ImportCostOperations)
+	costOperations.Get("/:id", handlers.GetCostOperation)
+	costOperations.Post("/", handlers.CreateCostOperation)
+	costOperations.Put("/:id", handlers.UpdateCostOperation)
+	costOperations.Delete("/:id", handlers.DeleteCostOperation)
+
 	// Transactions — full CRUD, any authenticated user
 	transactions := api.Group("/transactions")
 	transactions.Get("/", handlers.GetAllTransactions)
@@ -139,4 +156,5 @@ func Setup(app *fiber.App) {
 	reports.Get("/projects-summary", handlers.GetProjectsSummaryReport)
 	reports.Get("/projects/:id/summary", handlers.GetProjectSummaryReport)
 	reports.Get("/monthly", handlers.GetMonthlyReport)
+	reports.Get("/operational-summary", handlers.GetOperationalSummaryReport)
 }

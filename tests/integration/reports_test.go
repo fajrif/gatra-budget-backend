@@ -18,6 +18,7 @@ import (
 var reportPaths = []string{
 	"/api/reports/projects-summary",
 	"/api/reports/monthly",
+	"/api/reports/operational-summary",
 }
 
 // authedGet performs a GET with a Bearer token against the real middleware.

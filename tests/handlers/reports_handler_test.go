@@ -152,9 +152,12 @@ func TestGetMonthlyReport(t *testing.T) {
 			return r
 		}
 
-		// Queries run in order: expenses, billed, received, received fee.
+		// Queries run in order: project expenses, operational expenses, billed,
+		// received, received fee.
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "transactions"`)).
 			WillReturnRows(monthRows([]driver.Value{"2026-01", 400_000_000.0}, []driver.Value{"2026-02", 450_000_000.0}))
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "cost_operations"`)).
+			WillReturnRows(monthRows([]driver.Value{"2026-01", 20_000_000.0}, []driver.Value{"2026-03", 5_000_000.0}))
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).
 			WillReturnRows(monthRows([]driver.Value{"2026-01", 600_000_000.0}))
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).
@@ -176,7 +179,9 @@ func TestGetMonthlyReport(t *testing.T) {
 		assert.Equal(t, 400_000_000.0, jan["pengeluaran"])
 		assert.Equal(t, 600_000_000.0, jan["tagihan"])
 		assert.Equal(t, 0.0, jan["penerimaan"], "Submit invoices are not received yet")
-		assert.Equal(t, -400_000_000.0, jan["selisih"])
+		assert.Equal(t, 20_000_000.0, jan["operasional"])
+		assert.Equal(t, 420_000_000.0, jan["total_pengeluaran"])
+		assert.Equal(t, -420_000_000.0, jan["selisih"], "selisih subtracts operational expenses too")
 
 		feb := rows[1].(map[string]any)
 		assert.Equal(t, 500_000_000.0, feb["penerimaan"])
@@ -190,7 +195,26 @@ func TestGetMonthlyReport(t *testing.T) {
 		assert.Equal(t, 600_000_000.0, totals["tagihan"])
 		assert.Equal(t, 500_000_000.0, totals["penerimaan"])
 		assert.Equal(t, 50_000_000.0, totals["manajemen_fee"])
-		assert.Equal(t, -350_000_000.0, totals["selisih"])
+		assert.Equal(t, 25_000_000.0, totals["operasional"])
+		assert.Equal(t, 875_000_000.0, totals["total_pengeluaran"])
+		assert.Equal(t, -375_000_000.0, totals["selisih"])
+	})
+
+	t.Run("a project filter excludes operational expenses", func(t *testing.T) {
+		mock := testutil.SetupMockDB(t)
+		app := setupApp()
+		app.Get("/reports/monthly", handlers.GetMonthlyReport)
+
+		empty := func() *sqlmock.Rows { return sqlmock.NewRows([]string{"month", "total"}) }
+		// No cost_operations query is expected: the mock fails on any extra query.
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "transactions"`)).WillReturnRows(empty())
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
+
+		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/monthly?year=2026&project_id="+uuid.New().String(), nil))
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		assert.Equal(t, 0.0, readJSON(t, resp.Body)["totals"].(map[string]any)["operasional"])
 	})
 
 	t.Run("rejects an invalid year", func(t *testing.T) {
@@ -199,6 +223,36 @@ func TestGetMonthlyReport(t *testing.T) {
 		app.Get("/reports/monthly", handlers.GetMonthlyReport)
 
 		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/monthly?year=abc", nil))
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+}
+
+func TestGetOperationalSummaryReport(t *testing.T) {
+	t.Run("returns totals per cost type", func(t *testing.T) {
+		mock := testutil.SetupMockDB(t)
+		app := setupApp()
+		app.Get("/reports/operational-summary", handlers.GetOperationalSummaryReport)
+
+		typeID := uuid.New()
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM cost_operations AS co`)).
+			WillReturnRows(sqlmock.NewRows([]string{"operational_cost_type_id", "nama_biaya", "total"}).
+				AddRow(typeID, "Konsumsi", 3_000_000.0).
+				AddRow(uuid.New(), "ATK", 1_000_000.0))
+
+		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/operational-summary?year=2026", nil))
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+		body := readJSON(t, resp.Body)
+		assert.Len(t, body["rows"].([]any), 2)
+		assert.Equal(t, 4_000_000.0, body["total"])
+	})
+
+	t.Run("rejects an invalid year", func(t *testing.T) {
+		testutil.SetupMockDB(t)
+		app := setupApp()
+		app.Get("/reports/operational-summary", handlers.GetOperationalSummaryReport)
+
+		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/operational-summary?year=1", nil))
 		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 	})
 }
@@ -215,11 +269,13 @@ func TestReportRoutesAreAdminOnly(t *testing.T) {
 	app.Get("/reports/projects-summary", middleware.AdminOnly(), handlers.GetProjectsSummaryReport)
 	app.Get("/reports/projects/:id/summary", middleware.AdminOnly(), handlers.GetProjectSummaryReport)
 	app.Get("/reports/monthly", middleware.AdminOnly(), handlers.GetMonthlyReport)
+	app.Get("/reports/operational-summary", middleware.AdminOnly(), handlers.GetOperationalSummaryReport)
 
 	for _, path := range []string{
 		"/reports/projects-summary",
 		"/reports/projects/" + uuid.New().String() + "/summary",
 		"/reports/monthly",
+		"/reports/operational-summary",
 	} {
 		resp, _ := app.Test(httptest.NewRequest("GET", path, nil))
 		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode, path)

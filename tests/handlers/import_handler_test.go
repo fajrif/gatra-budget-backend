@@ -19,6 +19,7 @@ func TestImportRowLimits(t *testing.T) {
 	app.Post("/projects/import", handlers.ImportProjects)
 	app.Post("/transactions/import", handlers.ImportTransactions)
 	app.Post("/invoices/import", handlers.ImportInvoices)
+	app.Post("/cost-operations/import", handlers.ImportCostOperations)
 
 	tooMany := make([]map[string]any, helpers.MaxImportRows+1)
 	for i := range tooMany {
@@ -30,7 +31,7 @@ func TestImportRowLimits(t *testing.T) {
 		"missing rows": map[string]any{},
 		"too many":     map[string]any{"rows": tooMany},
 	}
-	for _, path := range []string{"/projects/import", "/transactions/import", "/invoices/import"} {
+	for _, path := range []string{"/projects/import", "/transactions/import", "/invoices/import", "/cost-operations/import"} {
 		for name, payload := range bodies {
 			t.Run(path+" "+name, func(t *testing.T) {
 				b, _ := json.Marshal(payload)
