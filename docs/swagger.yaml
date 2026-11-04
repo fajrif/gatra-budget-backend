@@ -194,12 +194,21 @@ definitions:
         type: string
       manajemen_fee:
         type: number
+      metode_pembayaran:
+        description: |-
+          MetodePembayaran and PeriodeTagihan say which month(s) of the project the
+          invoice bills for, which can differ from tgl_tagihan / tgl_bayar.
+        type: string
       nama_invoice:
         type: string
       nilai:
         type: number
       no_invoice:
         type: string
+      periode_tagihan:
+        items:
+          type: string
+        type: array
       project:
         $ref: '#/definitions/models.Project'
       project_id:
@@ -219,12 +228,18 @@ definitions:
         type: string
       manajemen_fee:
         type: number
+      metode_pembayaran:
+        type: string
       nama_invoice:
         type: string
       nilai:
         type: number
       no_invoice:
         type: string
+      periode_tagihan:
+        items:
+          type: string
+        type: array
       project_id:
         type: string
       status:
@@ -275,6 +290,10 @@ definitions:
         type: string
       no_sp2k:
         type: string
+      project_group:
+        $ref: '#/definitions/models.ProjectGroup'
+      project_group_id:
+        type: string
       tanggal_mulai:
         $ref: '#/definitions/models.Date'
       tanggal_perjanjian:
@@ -282,6 +301,26 @@ definitions:
       tanggal_selesai:
         $ref: '#/definitions/models.Date'
       updated_at:
+        type: string
+    type: object
+  models.ProjectGroup:
+    properties:
+      created_at:
+        type: string
+      deskripsi:
+        type: string
+      id:
+        type: string
+      nama:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.ProjectGroupRequest:
+    properties:
+      deskripsi:
+        type: string
+      nama:
         type: string
     type: object
   models.ProjectRequest:
@@ -299,6 +338,8 @@ definitions:
       no_perjanjian:
         type: string
       no_sp2k:
+        type: string
+      project_group_id:
         type: string
       tanggal_mulai:
         type: string
@@ -1649,6 +1690,14 @@ paths:
         in: query
         name: month
         type: string
+      - description: Filter by payment method (Kontrak, SPR)
+        in: query
+        name: metode_pembayaran
+        type: string
+      - description: Filter by billing period month (YYYY-MM)
+        in: query
+        name: periode
+        type: string
       - description: Search by no_invoice or nama_invoice
         in: query
         name: search
@@ -2244,6 +2293,177 @@ paths:
       summary: Update an operational cost type (admin only)
       tags:
       - OperationalCostTypes
+  /api/project-groups:
+    get:
+      description: Groups with their project_count and total_nilai (sum of their projects'
+        nilai_pekerjaan)
+      parameters:
+      - description: Search by nama
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: List of project groups with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all project groups
+      tags:
+      - ProjectGroups
+    post:
+      parameters:
+      - description: Project group details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProjectGroupRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.ProjectGroup'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a project group (admin only)
+      tags:
+      - ProjectGroups
+  /api/project-groups/{id}:
+    delete:
+      description: Rejected with 409 while projects still belong to it
+      parameters:
+      - description: Project group ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Still in use
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a project group (admin only)
+      tags:
+      - ProjectGroups
+    get:
+      parameters:
+      - description: Project group ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Project group details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Project group not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a project group by ID
+      tags:
+      - ProjectGroups
+    put:
+      parameters:
+      - description: Project group ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProjectGroupRequest'
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/models.ProjectGroup'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a project group (admin only)
+      tags:
+      - ProjectGroups
   /api/projects:
     get:
       consumes:
@@ -2254,6 +2474,10 @@ paths:
       - description: Filter by contract status (not_started, ongoing, expired)
         in: query
         name: contract_status
+        type: string
+      - description: Filter by project group ID (UUID)
+        in: query
+        name: project_group_id
         type: string
       - description: Search by no_sp2k or judul_pekerjaan
         in: query

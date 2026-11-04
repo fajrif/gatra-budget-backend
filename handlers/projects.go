@@ -80,6 +80,8 @@ func applyProjectRequest(p *models.Project, req *models.ProjectRequest) error {
 	p.NilaiPekerjaan = req.NilaiPekerjaan
 	p.ClientID = helpers.ParseUUIDPtr(req.ClientID)
 	p.ContractTypeID = helpers.ParseUUIDPtr(req.ContractTypeID)
+	p.ProjectGroupID = helpers.ParseUUIDPtr(req.ProjectGroupID)
+	p.ProjectGroup = nil
 
 	p.TanggalMulai = models.Date{Time: *tanggalMulai}
 	p.TanggalSelesai = models.Date{Time: *tanggalSelesai}
@@ -118,6 +120,7 @@ func contractStatusCondition(status string) (string, bool) {
 // @Produce json
 // @Security BearerAuth
 // @Param contract_status query string false "Filter by contract status (not_started, ongoing, expired)"
+// @Param project_group_id query string false "Filter by project group ID (UUID)"
 // @Param search query string false "Search by no_sp2k or judul_pekerjaan"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
@@ -129,7 +132,7 @@ func contractStatusCondition(status string) (string, bool) {
 func GetAllProjects(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
 
-	query := config.DB.Preload("Client").Preload("ContractType").Order("created_at DESC")
+	query := config.DB.Preload("Client").Preload("ContractType").Preload("ProjectGroup").Order("created_at DESC")
 	queryCount := config.DB.Model(&models.Project{})
 
 	if c.Query("all") == "true" {
@@ -144,6 +147,11 @@ func GetAllProjects(c *fiber.Ctx) error {
 		}
 		query = query.Where(cond)
 		queryCount = queryCount.Where(cond)
+	}
+
+	if groupID := c.Query("project_group_id"); groupID != "" {
+		query = query.Where("project_group_id = ?", groupID)
+		queryCount = queryCount.Where("project_group_id = ?", groupID)
 	}
 
 	if search := c.Query("search"); search != "" {
@@ -181,7 +189,7 @@ func GetAllProjects(c *fiber.Ctx) error {
 // @Router /api/projects/{id} [get]
 func GetProject(c *fiber.Ctx) error {
 	var project models.Project
-	if err := config.DB.Preload("Client").Preload("ContractType").Where("id = ?", c.Params("id")).First(&project).Error; err != nil {
+	if err := config.DB.Preload("Client").Preload("ContractType").Preload("ProjectGroup").Where("id = ?", c.Params("id")).First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
 	}
 	return c.JSON(fiber.Map{"project": toProjectResponse(project)})

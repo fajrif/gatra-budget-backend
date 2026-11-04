@@ -1940,6 +1940,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "Filter by payment method (Kontrak, SPR)",
+                        "name": "metode_pembayaran",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by billing period month (YYYY-MM)",
+                        "name": "periode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Search by no_invoice or nama_invoice",
                         "name": "search",
                         "in": "query"
@@ -2840,6 +2852,267 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/project-groups": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Groups with their project_count and total_nilai (sum of their projects' nilai_pekerjaan)",
+                "tags": [
+                    "ProjectGroups"
+                ],
+                "summary": "Get all project groups",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by nama",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Get all records without pagination",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of project groups with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "ProjectGroups"
+                ],
+                "summary": "Create a project group (admin only)",
+                "parameters": [
+                    {
+                        "description": "Project group details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProjectGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.ProjectGroup"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/project-groups/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "ProjectGroups"
+                ],
+                "summary": "Get a project group by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project group ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project group details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Project group not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "ProjectGroups"
+                ],
+                "summary": "Update a project group (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project group ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProjectGroupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "schema": {
+                            "$ref": "#/definitions/models.ProjectGroup"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Rejected with 409 while projects still belong to it",
+                "tags": [
+                    "ProjectGroups"
+                ],
+                "summary": "Delete a project group (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project group ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Still in use",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/projects": {
             "get": {
                 "security": [
@@ -2863,6 +3136,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by contract status (not_started, ongoing, expired)",
                         "name": "contract_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by project group ID (UUID)",
+                        "name": "project_group_id",
                         "in": "query"
                     },
                     {
@@ -4796,6 +5075,10 @@ const docTemplate = `{
                 "manajemen_fee": {
                     "type": "number"
                 },
+                "metode_pembayaran": {
+                    "description": "MetodePembayaran and PeriodeTagihan say which month(s) of the project the\ninvoice bills for, which can differ from tgl_tagihan / tgl_bayar.",
+                    "type": "string"
+                },
                 "nama_invoice": {
                     "type": "string"
                 },
@@ -4804,6 +5087,12 @@ const docTemplate = `{
                 },
                 "no_invoice": {
                     "type": "string"
+                },
+                "periode_tagihan": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "project": {
                     "$ref": "#/definitions/models.Project"
@@ -4834,6 +5123,9 @@ const docTemplate = `{
                 "manajemen_fee": {
                     "type": "number"
                 },
+                "metode_pembayaran": {
+                    "type": "string"
+                },
                 "nama_invoice": {
                     "type": "string"
                 },
@@ -4842,6 +5134,12 @@ const docTemplate = `{
                 },
                 "no_invoice": {
                     "type": "string"
+                },
+                "periode_tagihan": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "project_id": {
                     "type": "string"
@@ -4919,6 +5217,12 @@ const docTemplate = `{
                 "no_sp2k": {
                     "type": "string"
                 },
+                "project_group": {
+                    "$ref": "#/definitions/models.ProjectGroup"
+                },
+                "project_group_id": {
+                    "type": "string"
+                },
                 "tanggal_mulai": {
                     "$ref": "#/definitions/models.Date"
                 },
@@ -4929,6 +5233,37 @@ const docTemplate = `{
                     "$ref": "#/definitions/models.Date"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProjectGroup": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deskripsi": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProjectGroupRequest": {
+            "type": "object",
+            "properties": {
+                "deskripsi": {
+                    "type": "string"
+                },
+                "nama": {
                     "type": "string"
                 }
             }
@@ -4955,6 +5290,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "no_sp2k": {
+                    "type": "string"
+                },
+                "project_group_id": {
                     "type": "string"
                 },
                 "tanggal_mulai": {

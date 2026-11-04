@@ -92,6 +92,13 @@ func Setup(app *fiber.App) {
 	costTypes.Delete("/:id", middleware.AdminOnly(), handlers.DeleteCostType)
 
 	// Projects — full CRUD, any authenticated user
+	projectGroups := api.Group("/project-groups")
+	projectGroups.Get("/", handlers.GetAllProjectGroups)
+	projectGroups.Get("/:id", handlers.GetProjectGroup)
+	projectGroups.Post("/", middleware.AdminOnly(), handlers.CreateProjectGroup)
+	projectGroups.Put("/:id", middleware.AdminOnly(), handlers.UpdateProjectGroup)
+	projectGroups.Delete("/:id", middleware.AdminOnly(), handlers.DeleteProjectGroup)
+
 	projects := api.Group("/projects")
 	projects.Get("/", handlers.GetAllProjects)
 	projects.Post("/import", handlers.ImportProjects)

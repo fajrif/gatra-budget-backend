@@ -130,6 +130,8 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 			Status: models.InvoiceStatusSubmit, Nilai: 300_000_000, ManajemenFee: 20_000_000},
 	} {
 		inv.ProjectID = project.ID
+		inv.MetodePembayaran = models.PaymentMethodKontrak
+		inv.PeriodeTagihan = models.MonthList{inv.TglTagihan.Time.Format("2006-01")}
 		if err := tx.Create(&inv).Error; err != nil {
 			t.Fatalf("failed to create invoice: %v", err)
 		}

@@ -21,13 +21,15 @@ import (
 
 func invoiceBody(overrides map[string]any) *bytes.Reader {
 	body := map[string]any{
-		"no_invoice":    "INV-001",
-		"project_id":    uuid.New().String(),
-		"nama_invoice":  "Tagihan Oktober",
-		"tgl_tagihan":   "2026-10-01",
-		"status":        "Submit",
-		"nilai":         100_000_000.0,
-		"manajemen_fee": 5_000_000.0,
+		"no_invoice":        "INV-001",
+		"project_id":        uuid.New().String(),
+		"nama_invoice":      "Tagihan Oktober",
+		"tgl_tagihan":       "2026-10-01",
+		"status":            "Submit",
+		"metode_pembayaran": "Kontrak",
+		"periode_tagihan":   []string{"2026-10"},
+		"nilai":             100_000_000.0,
+		"manajemen_fee":     5_000_000.0,
 	}
 	for k, v := range overrides {
 		if v == nil {
@@ -38,6 +40,12 @@ func invoiceBody(overrides map[string]any) *bytes.Reader {
 	}
 	b, _ := json.Marshal(body)
 	return bytes.NewReader(b)
+}
+
+// projectRows is a project whose contract runs 2026-09-01 to 2026-12-31.
+func projectRows(id uuid.UUID) *sqlmock.Rows {
+	return sqlmock.NewRows([]string{"id", "no_sp2k", "tanggal_mulai", "tanggal_selesai"}).
+		AddRow(id, "SP2K-001", "2026-09-01", "2026-12-31")
 }
 
 func postInvoice(app *fiber.App, body *bytes.Reader) int {
@@ -65,6 +73,14 @@ func TestCreateInvoiceValidation(t *testing.T) {
 		{"Submit with tgl_bayar", map[string]any{"tgl_bayar": "2026-10-20"}},
 		{"tgl_bayar on the billing date", map[string]any{"status": "Kliring", "tgl_bayar": "2026-10-01"}},
 		{"tgl_bayar before tgl_tagihan", map[string]any{"status": "Kliring", "tgl_bayar": "2026-09-30"}},
+		{"missing metode_pembayaran", map[string]any{"metode_pembayaran": nil}},
+		{"unknown metode_pembayaran", map[string]any{"metode_pembayaran": "Cash"}},
+		{"missing periode_tagihan", map[string]any{"periode_tagihan": nil}},
+		{"empty periode_tagihan", map[string]any{"periode_tagihan": []string{}}},
+		{"bad periode format", map[string]any{"periode_tagihan": []string{"2026-13"}}},
+		{"periode without year", map[string]any{"periode_tagihan": []string{"Okt"}}},
+		{"duplicate periode", map[string]any{"metode_pembayaran": "SPR", "periode_tagihan": []string{"2026-10", "2026-10"}}},
+		{"Kontrak with two months", map[string]any{"periode_tagihan": []string{"2026-09", "2026-10"}}},
 		{"negative fee", map[string]any{"manajemen_fee": -1.0}},
 		{"fee above nilai", map[string]any{"manajemen_fee": 200_000_000.0}},
 	}
@@ -86,7 +102,7 @@ func TestCreateInvoice(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
 			WithArgs(projectID.String()).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "no_sp2k"}).AddRow(projectID, "SP2K-001"))
+			WillReturnRows(projectRows(projectID))
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "invoices" WHERE no_invoice = $1`)).
 			WithArgs("INV-001").
 			WillReturnError(gorm.ErrRecordNotFound)
@@ -119,7 +135,7 @@ func TestCreateInvoice(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
 			WithArgs(projectID.String()).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "no_sp2k"}).AddRow(projectID, "SP2K-001"))
+			WillReturnRows(projectRows(projectID))
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "invoices" WHERE no_invoice = $1`)).
 			WithArgs("INV-001").
 			WillReturnError(gorm.ErrRecordNotFound)
@@ -143,6 +159,55 @@ func TestCreateInvoice(t *testing.T) {
 		assert.Equal(t, 0.0, created["manajemen_fee"])
 	})
 
+	t.Run("SPR invoice keeps several billing months, sorted", func(t *testing.T) {
+		mock := testutil.SetupMockDB(t)
+		projectID := uuid.New()
+
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
+			WithArgs(projectID.String()).
+			WillReturnRows(projectRows(projectID))
+		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "invoices" WHERE no_invoice = $1`)).
+			WithArgs("INV-001").
+			WillReturnError(gorm.ErrRecordNotFound)
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "invoices"`)).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
+				AddRow(uuid.New(), time.Now(), time.Now()))
+		mock.ExpectCommit()
+
+		req := httptest.NewRequest("POST", "/invoices", invoiceBody(map[string]any{
+			"project_id":        projectID.String(),
+			"metode_pembayaran": "SPR",
+			"periode_tagihan":   []string{"2026-11", "2026-10"},
+		}))
+		req.Header.Set("Content-Type", "application/json")
+		resp, _ := app.Test(req)
+		respBody, _ := io.ReadAll(resp.Body)
+		assert.Equal(t, fiber.StatusCreated, resp.StatusCode, string(respBody))
+
+		var created map[string]any
+		json.Unmarshal(respBody, &created)
+		assert.Equal(t, "SPR", created["metode_pembayaran"])
+		assert.Equal(t, []any{"2026-10", "2026-11"}, created["periode_tagihan"])
+	})
+
+	for _, month := range []string{"2026-08", "2027-01"} {
+		t.Run("billing month "+month+" outside the project contract returns 400", func(t *testing.T) {
+			mock := testutil.SetupMockDB(t)
+			projectID := uuid.New()
+
+			mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
+				WithArgs(projectID.String()).
+				WillReturnRows(projectRows(projectID))
+
+			status := postInvoice(app, invoiceBody(map[string]any{
+				"project_id":      projectID.String(),
+				"periode_tagihan": []string{month},
+			}))
+			assert.Equal(t, fiber.StatusBadRequest, status)
+		})
+	}
+
 	t.Run("unknown project returns 404", func(t *testing.T) {
 		mock := testutil.SetupMockDB(t)
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
@@ -156,7 +221,7 @@ func TestCreateInvoice(t *testing.T) {
 		projectID := uuid.New()
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "projects" WHERE id = $1`)).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "no_sp2k"}).AddRow(projectID, "SP2K-001"))
+			WillReturnRows(projectRows(projectID))
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "invoices" WHERE no_invoice = $1`)).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "no_invoice"}).AddRow(uuid.New(), "INV-001"))
 

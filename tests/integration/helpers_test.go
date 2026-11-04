@@ -192,8 +192,8 @@ func newTestProject(t *testing.T, tx *gorm.DB) (models.Project, models.CostType)
 	project := models.Project{
 		NoSP2K:         "SP2K-" + uuid.NewString()[:8],
 		JudulPekerjaan: "Proyek Uji",
-		TanggalMulai:   models.Date{Time: mustParseDate(t, "2024-01-01")},
-		TanggalSelesai: models.Date{Time: mustParseDate(t, "2024-12-31")},
+		TanggalMulai:   models.Date{Time: mustParseDate(t, "2026-01-01")},
+		TanggalSelesai: models.Date{Time: mustParseDate(t, "2026-12-31")},
 		NilaiPekerjaan: 1_000_000_000,
 	}
 	if err := tx.Create(&project).Error; err != nil {

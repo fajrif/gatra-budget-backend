@@ -191,6 +191,7 @@ func TestImportInvoices(t *testing.T) {
 		return map[string]any{
 			"row": n, "no_sp2k": project.NoSP2K, "no_invoice": no, "nama_invoice": "Termin",
 			"tgl_tagihan": "2026-10-01", "status": "submit", "nilai": "100000000", "manajemen_fee": "5000000",
+			"metode_pembayaran": "kontrak", "periode_tagihan": "2026-09",
 		}
 	}
 

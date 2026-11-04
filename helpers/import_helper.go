@@ -50,6 +50,7 @@ var validationMessages = map[string]string{
 	"status must be 'Submit' or 'Kliring'":                          "harus 'Submit' atau 'Kliring'",
 	"tgl_bayar is required when status is Kliring":                  "wajib diisi bila status Kliring",
 	"tgl_bayar must be empty when status is Submit":                 "harus kosong bila status Submit",
+	"metode_pembayaran must be 'Kontrak' or 'SPR'":                  "harus 'Kontrak' atau 'SPR'",
 	"manajemen_fee must not be negative":                            "tidak boleh negatif",
 }
 

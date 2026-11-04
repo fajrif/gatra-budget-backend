@@ -26,6 +26,7 @@ type ProjectImportRow struct {
 	NilaiPekerjaan    string `json:"nilai_pekerjaan"`
 	Client            string `json:"client"`
 	ContractType      string `json:"contract_type"`
+	ProjectGroup      string `json:"project_group"`
 }
 
 // optionalString returns nil for an empty cell.
@@ -59,6 +60,11 @@ func ImportProjects(c *fiber.Ctx) error {
 		return respondImportError(c, err)
 	}
 	contractTypes, err := loadNameIndex("contract_types", "name")
+	if err != nil {
+		return respondImportError(c, err)
+	}
+
+	projectGroups, err := loadNameIndex("project_groups", "nama")
 	if err != nil {
 		return respondImportError(c, err)
 	}
@@ -132,6 +138,14 @@ func ImportProjects(c *fiber.Ctx) error {
 				req.ContractTypeID = &idStr
 			} else {
 				errs.add(r.Row, "contract_type", "jenis kontrak '"+name+"' tidak ditemukan")
+			}
+		}
+		if name := strings.TrimSpace(r.ProjectGroup); name != "" {
+			if id, ok := projectGroups[helpers.NormalizeKey(name)]; ok {
+				idStr := id.String()
+				req.ProjectGroupID = &idStr
+			} else {
+				errs.add(r.Row, "project_group", "group proyek '"+name+"' tidak ditemukan")
 			}
 		}
 

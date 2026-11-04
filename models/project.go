@@ -21,6 +21,8 @@ type Project struct {
 	Client            *Client       `gorm:"foreignKey:ClientID" json:"client,omitempty"`
 	ContractTypeID    *uuid.UUID    `gorm:"type:uuid" json:"contract_type_id,omitempty"`
 	ContractType      *ContractType `gorm:"foreignKey:ContractTypeID" json:"contract_type,omitempty"`
+	ProjectGroupID    *uuid.UUID    `gorm:"type:uuid" json:"project_group_id,omitempty"`
+	ProjectGroup      *ProjectGroup `gorm:"foreignKey:ProjectGroupID" json:"project_group,omitempty"`
 	CreatedBy         string        `json:"created_by"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`
@@ -44,4 +46,5 @@ type ProjectRequest struct {
 	NilaiPekerjaan    float64 `json:"nilai_pekerjaan"`
 	ClientID          *string `json:"client_id"`
 	ContractTypeID    *string `json:"contract_type_id"`
+	ProjectGroupID    *string `json:"project_group_id"`
 }

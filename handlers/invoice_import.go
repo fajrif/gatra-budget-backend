@@ -15,16 +15,18 @@ import (
 // InvoiceImportRow is one row of the invoice Excel template. The project is
 // referenced by its No SP2K.
 type InvoiceImportRow struct {
-	Row          int    `json:"row"`
-	NoSP2K       string `json:"no_sp2k"`
-	NoInvoice    string `json:"no_invoice"`
-	NamaInvoice  string `json:"nama_invoice"`
-	TglTagihan   string `json:"tgl_tagihan"`
-	TglBayar     string `json:"tgl_bayar"`
-	Status       string `json:"status"`
-	Nilai        string `json:"nilai"`
-	ManajemenFee string `json:"manajemen_fee"`
-	Description  string `json:"description"`
+	Row              int    `json:"row"`
+	NoSP2K           string `json:"no_sp2k"`
+	NoInvoice        string `json:"no_invoice"`
+	NamaInvoice      string `json:"nama_invoice"`
+	TglTagihan       string `json:"tgl_tagihan"`
+	TglBayar         string `json:"tgl_bayar"`
+	Status           string `json:"status"`
+	MetodePembayaran string `json:"metode_pembayaran"`
+	PeriodeTagihan   string `json:"periode_tagihan"`
+	Nilai            string `json:"nilai"`
+	ManajemenFee     string `json:"manajemen_fee"`
+	Description      string `json:"description"`
 }
 
 // canonicalInvoiceStatus lets the template accept "submit"/"KLIRING" in any
@@ -37,6 +39,25 @@ func canonicalInvoiceStatus(s string) string {
 		return models.InvoiceStatusKliring
 	}
 	return s
+}
+
+// canonicalPaymentMethod accepts "kontrak"/"SPR" in any case.
+func canonicalPaymentMethod(s string) string {
+	switch strings.ToLower(s) {
+	case "kontrak":
+		return models.PaymentMethodKontrak
+	case "spr":
+		return models.PaymentMethodSPR
+	}
+	return s
+}
+
+// splitPeriods splits the periode_tagihan cell ("2026-03, 2026-04") on commas,
+// semicolons and whitespace.
+func splitPeriods(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return r == ',' || r == ';' || r == ' ' || r == '\n'
+	})
 }
 
 // ImportInvoices godoc
@@ -83,6 +104,8 @@ func ImportInvoices(c *fiber.Ctx) error {
 		r.TglTagihan = strings.TrimSpace(r.TglTagihan)
 		r.TglBayar = strings.TrimSpace(r.TglBayar)
 		r.Status = canonicalInvoiceStatus(strings.TrimSpace(r.Status))
+		r.MetodePembayaran = canonicalPaymentMethod(strings.TrimSpace(r.MetodePembayaran))
+		r.PeriodeTagihan = strings.TrimSpace(r.PeriodeTagihan)
 		r.Nilai = strings.TrimSpace(r.Nilai)
 		r.ManajemenFee = strings.TrimSpace(r.ManajemenFee)
 
@@ -94,6 +117,8 @@ func ImportInvoices(c *fiber.Ctx) error {
 			importField{"nama_invoice", r.NamaInvoice},
 			importField{"tgl_tagihan", r.TglTagihan},
 			importField{"status", r.Status},
+			importField{"metode_pembayaran", r.MetodePembayaran},
+			importField{"periode_tagihan", r.PeriodeTagihan},
 			importField{"nilai", r.Nilai},
 		)
 
@@ -106,12 +131,14 @@ func ImportInvoices(c *fiber.Ctx) error {
 		}
 
 		req := &models.InvoiceRequest{
-			NoInvoice:   r.NoInvoice,
-			NamaInvoice: r.NamaInvoice,
-			TglTagihan:  r.TglTagihan,
-			TglBayar:    optionalString(r.TglBayar),
-			Status:      r.Status,
-			Description: optionalString(strings.TrimSpace(r.Description)),
+			NoInvoice:        r.NoInvoice,
+			NamaInvoice:      r.NamaInvoice,
+			TglTagihan:       r.TglTagihan,
+			TglBayar:         optionalString(r.TglBayar),
+			Status:           r.Status,
+			MetodePembayaran: r.MetodePembayaran,
+			PeriodeTagihan:   splitPeriods(r.PeriodeTagihan),
+			Description:      optionalString(strings.TrimSpace(r.Description)),
 			// Placeholder keeps the shared validator from reporting the project
 			// lookup a second time; the real ID replaces it on success.
 			ProjectID: "-",
@@ -123,6 +150,11 @@ func ImportInvoices(c *fiber.Ctx) error {
 			} else {
 				errs.add(r.Row, "no_sp2k", "proyek dengan No SP2K '"+r.NoSP2K+"' tidak ditemukan")
 			}
+		}
+
+		var project *models.Project
+		if r.NoSP2K != "" {
+			project = projects[helpers.NormalizeKey(r.NoSP2K)]
 		}
 
 		if r.Nilai != "" {
@@ -142,6 +174,8 @@ func ImportInvoices(c *fiber.Ctx) error {
 
 		if len(errs.list) == before {
 			if err := ValidateInvoiceRequest(req); err != nil {
+				errs.addValidation(r.Row, err)
+			} else if err := ValidateInvoicePeriodInProject(req, project); err != nil {
 				errs.addValidation(r.Row, err)
 			} else if err := applyInvoiceRequest(&models.Invoice{}, req); err != nil {
 				errs.addValidation(r.Row, err)

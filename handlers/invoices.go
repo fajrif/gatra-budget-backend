@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"regexp"
+	"sort"
+
 	"gatra-budget-backend/config"
 	"gatra-budget-backend/helpers"
 	"gatra-budget-backend/models"
@@ -31,6 +34,10 @@ func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 		return fiber.NewError(fiber.StatusBadRequest, "status must be 'Submit' or 'Kliring'")
 	}
 
+	if err := validateInvoicePeriod(req); err != nil {
+		return err
+	}
+
 	hasTglBayar := req.TglBayar != nil && *req.TglBayar != ""
 	if req.Status == models.InvoiceStatusKliring && !hasTglBayar {
 		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar is required when status is Kliring")
@@ -53,6 +60,48 @@ func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 	return nil
 }
 
+var billingMonthPattern = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
+
+// validateInvoicePeriod checks metode_pembayaran and periode_tagihan: the
+// method is Kontrak or SPR, every period is a valid YYYY-MM without
+// duplicates, Kontrak bills exactly one month and SPR at least one.
+func validateInvoicePeriod(req *models.InvoiceRequest) error {
+	if req.MetodePembayaran != models.PaymentMethodKontrak && req.MetodePembayaran != models.PaymentMethodSPR {
+		return fiber.NewError(fiber.StatusBadRequest, "metode_pembayaran must be 'Kontrak' or 'SPR'")
+	}
+	if len(req.PeriodeTagihan) == 0 {
+		return fiber.NewError(fiber.StatusBadRequest, "periode_tagihan is required")
+	}
+	seen := make(map[string]bool, len(req.PeriodeTagihan))
+	for _, m := range req.PeriodeTagihan {
+		if !billingMonthPattern.MatchString(m) {
+			return fiber.NewError(fiber.StatusBadRequest, "periode_tagihan harus berformat YYYY-MM, bukan '"+m+"'")
+		}
+		if seen[m] {
+			return fiber.NewError(fiber.StatusBadRequest, "periode_tagihan memuat bulan ganda '"+m+"'")
+		}
+		seen[m] = true
+	}
+	if req.MetodePembayaran == models.PaymentMethodKontrak && len(req.PeriodeTagihan) != 1 {
+		return fiber.NewError(fiber.StatusBadRequest, "periode_tagihan harus tepat 1 bulan untuk metode Kontrak")
+	}
+	return nil
+}
+
+// ValidateInvoicePeriodInProject requires every billing month to fall inside
+// the project's contract (tanggal_mulai..tanggal_selesai, by month).
+func ValidateInvoicePeriodInProject(req *models.InvoiceRequest, project *models.Project) error {
+	first := project.TanggalMulai.Time.Format("2006-01")
+	last := project.TanggalSelesai.Time.Format("2006-01")
+	for _, m := range req.PeriodeTagihan {
+		if m < first || m > last {
+			return fiber.NewError(fiber.StatusBadRequest,
+				"periode_tagihan '"+m+"' di luar masa kontrak proyek ("+first+" s/d "+last+")")
+		}
+	}
+	return nil
+}
+
 // applyInvoiceRequest copies a validated InvoiceRequest onto an Invoice,
 // parsing the dates. CreatedBy is set by the caller on create only.
 func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error {
@@ -69,6 +118,10 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 	inv.ProjectID = helpers.ParseUUID(req.ProjectID)
 	inv.NamaInvoice = req.NamaInvoice
 	inv.Status = req.Status
+	inv.MetodePembayaran = req.MetodePembayaran
+	periods := append(models.MonthList{}, req.PeriodeTagihan...)
+	sort.Strings(periods)
+	inv.PeriodeTagihan = periods
 	inv.Nilai = req.Nilai
 	inv.Description = req.Description
 	inv.ManajemenFee = 0
@@ -95,6 +148,8 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 // @Param project_id query string false "Filter by project ID (UUID)"
 // @Param status query string false "Filter by status (Submit, Kliring)"
 // @Param month query string false "Filter by tgl_tagihan month (YYYY-MM)"
+// @Param metode_pembayaran query string false "Filter by payment method (Kontrak, SPR)"
+// @Param periode query string false "Filter by billing period month (YYYY-MM)"
 // @Param search query string false "Search by no_invoice or nama_invoice"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 20)"
@@ -127,6 +182,16 @@ func GetAllInvoices(c *fiber.Ctx) error {
 	if month := c.Query("month"); month != "" {
 		query = query.Where("to_char(tgl_tagihan, 'YYYY-MM') = ?", month)
 		queryCount = queryCount.Where("to_char(tgl_tagihan, 'YYYY-MM') = ?", month)
+	}
+
+	if metode := c.Query("metode_pembayaran"); metode != "" {
+		query = query.Where("metode_pembayaran = ?", metode)
+		queryCount = queryCount.Where("metode_pembayaran = ?", metode)
+	}
+
+	if periode := c.Query("periode"); periode != "" {
+		query = query.Where("? = ANY(periode_tagihan)", periode)
+		queryCount = queryCount.Where("? = ANY(periode_tagihan)", periode)
 	}
 
 	if search := c.Query("search"); search != "" {
@@ -189,6 +254,9 @@ func CreateInvoice(c *fiber.Ctx) error {
 	if err := config.DB.Where("id = ?", req.ProjectID).First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
 	}
+	if err := ValidateInvoicePeriodInProject(&req, &project); err != nil {
+		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
+	}
 
 	var existing models.Invoice
 	if err := config.DB.Where("no_invoice = ?", req.NoInvoice).First(&existing).Error; err == nil {
@@ -238,6 +306,9 @@ func UpdateInvoice(c *fiber.Ctx) error {
 	var project models.Project
 	if err := config.DB.Where("id = ?", req.ProjectID).First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Project not found"})
+	}
+	if err := ValidateInvoicePeriodInProject(&req, &project); err != nil {
+		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	var existing models.Invoice

@@ -18,6 +18,9 @@ func newInvoice(t *testing.T, projectID uuid.UUID, no string) models.Invoice {
 		TglTagihan:  models.Date{Time: mustParseDate(t, "2026-10-01")},
 		Status:      models.InvoiceStatusSubmit,
 		Nilai:       100_000_000,
+
+		MetodePembayaran: models.PaymentMethodKontrak,
+		PeriodeTagihan:   models.MonthList{"2026-10"},
 	}
 }
 
@@ -53,6 +56,9 @@ func TestInvoiceCheckConstraints(t *testing.T) {
 		{"Submit with tgl_bayar", func(i *models.Invoice) { i.TglBayar = &bayar }},
 		{"fee above nilai", func(i *models.Invoice) { i.ManajemenFee = i.Nilai + 1 }},
 		{"unknown status", func(i *models.Invoice) { i.Status = "Paid" }},
+		{"unknown metode", func(i *models.Invoice) { i.MetodePembayaran = "Cash" }},
+		{"empty periode", func(i *models.Invoice) { i.PeriodeTagihan = models.MonthList{} }},
+		{"Kontrak with two months", func(i *models.Invoice) { i.PeriodeTagihan = models.MonthList{"2026-09", "2026-10"} }},
 	}
 	for n, tc := range cases {
 		inv := newInvoice(t, project.ID, "INV-C-"+string(rune('A'+n)))
@@ -99,7 +105,7 @@ func TestInvoiceCreateAndClearAgainstRealDB(t *testing.T) {
 
 	payload := func(status, bayar string) string {
 		return `{"no_invoice":"INV-H-1","project_id":"` + project.ID.String() + `","nama_invoice":"Termin 1",
-			"tgl_tagihan":"2026-10-01","status":"` + status + `"` + bayar + `,"nilai":100000000,"manajemen_fee":5000000}`
+			"tgl_tagihan":"2026-10-01","status":"` + status + `"` + bayar + `,"metode_pembayaran":"Kontrak","periode_tagihan":["2026-09"],"nilai":100000000,"manajemen_fee":5000000}`
 	}
 
 	resp := doJSON(t, a, "POST", "/invoices", payload("Submit", ""))
