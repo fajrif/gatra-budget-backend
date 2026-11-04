@@ -22,6 +22,14 @@ func main() {
 
 	args := os.Args[1:]
 
+	if len(args) > 0 && args[0] == "demo-reset" {
+		assumeYes := len(args) > 1 && args[1] == "--yes"
+		if err := seeds.DemoReset(config.DB, os.Stdin, os.Stdout, assumeYes); err != nil {
+			log.Fatalf("Error resetting demo data: %v", err)
+		}
+		return
+	}
+
 	if len(args) == 0 {
 		fmt.Println("Running all seeders...")
 		fmt.Println("==========================================")
@@ -66,8 +74,10 @@ func runSpecificSeeder(name string) {
 		err = seeds.UsersSeeder(config.DB)
 	case "operational_cost_types":
 		err = seeds.OperationalCostTypesSeeder(config.DB)
+	case "demo":
+		err = seeds.DemoSeeder(config.DB)
 	default:
-		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n  - users\n  - operational_cost_types\n", name)
+		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n  - users\n  - operational_cost_types\n  - demo (sample data 2025-2026, not part of 'all')\n  - demo-reset (interactive, removes demo data)\n", name)
 	}
 
 	if err != nil {

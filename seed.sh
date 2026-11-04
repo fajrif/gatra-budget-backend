@@ -49,6 +49,10 @@ show_usage() {
   echo "  address_reference    Seed countries, provinces, cities, areas"
   echo "  users                Seed the default admin and user accounts"
   echo "  operational_cost_types  Seed starter operational expense categories"
+  echo "  demo                 Seed sample data 2025-2026 (groups, projects, transactions, invoices); NOT part of 'all'"
+  echo ""
+  echo -e "${GREEN}Demo data:${NC}"
+  echo "  demo-reset [--yes]   Interactively remove demo data only (y/N per data kind)"
   echo ""
   echo -e "${BLUE}Examples:${NC}"
   echo "  $0 all                             Run all seeders"
@@ -91,6 +95,8 @@ list_seeders() {
   echo -e "${GREEN}▶ address_reference${NC} - Seed countries, provinces, cities, and areas"
   echo -e "${GREEN}▶ users${NC} - Seed the default admin and user accounts"
   echo -e "${GREEN}▶ operational_cost_types${NC} - Seed starter operational expense categories"
+  echo -e "${GREEN}▶ demo${NC} - Sample data 2025-2026 (run explicitly; not part of 'all')"
+  echo -e "${GREEN}▶ demo-reset${NC} - Interactively remove the demo data"
   echo ""
   echo -e "${YELLOW}To add more seeders:${NC}"
   echo "  1. Create a new file in seeds/ directory"
@@ -120,6 +126,12 @@ list | ls)
 
 rebuild)
   rebuild_tool
+  ;;
+
+demo-reset)
+  check_seed_binary
+  shift
+  "$SEED_BINARY" demo-reset "$@"
   ;;
 
 help | -h | --help)
