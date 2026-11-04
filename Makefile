@@ -1,4 +1,4 @@
-.PHONY: help install run build test clean dev
+.PHONY: help install tidy run build test clean dev
 .PHONY: db-create db-drop db-drop-test db-migrate db-setup db-reset db-seed db-rollback db-status db-version db-console db-info
 .PHONY: migrate migrate-status migrate-rollback migrate-create build-migrate
 .PHONY: seed seed-list seed-rebuild build-seed
@@ -18,7 +18,8 @@ help:
 	@echo ""
 	@echo "📦 Application Commands:"
 	@echo "  make install          - Install Go dependencies"
-	@echo "  make run              - Run the application"
+	@echo "  make tidy             - Running check source code dependencies"
+	@echo "  make run           - Run the application"
 	@echo "  make build            - Build the application binary"
 	@echo "  make dev              - Run with hot reload (requires air)"
 	@echo "  make test             - Run all tests (unit + integration)"
@@ -78,8 +79,12 @@ help:
 install:
 	@echo "📦 Installing dependencies..."
 	go mod download
-	go mod tidy
 	@echo "✓ Dependencies installed"
+
+tidy:
+	@echo "📦 Check source code dependencies..."
+	go mod tidy
+	@echo "✓ go.mod/go.sum updated"
 
 run:
 	@echo "🚀 Starting application..."

@@ -13,6 +13,11 @@
 *.test
 /bin/*
 
+# Default output of a bare `go build` in the project root
+/gatra-budget-backend
+/migrate
+/seed
+
 # Go coverage files
 *.out
 
