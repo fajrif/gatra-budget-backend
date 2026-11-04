@@ -1703,9 +1703,10 @@ paths:
         in: query
         name: project_group_id
         type: string
-      - description: Filter by tgl_tagihan year (YYYY)
+      - description: 'Filter by billing period year (YYYY): invoices whose earliest
+          billing period is in that year'
         in: query
-        name: year
+        name: periode_year
         type: string
       - description: Search by no_invoice or nama_invoice
         in: query
@@ -1732,7 +1733,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid year
+          description: Invalid periode_year
           schema:
             additionalProperties: true
             type: object

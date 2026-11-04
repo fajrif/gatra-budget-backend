@@ -1958,8 +1958,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Filter by tgl_tagihan year (YYYY)",
-                        "name": "year",
+                        "description": "Filter by billing period year (YYYY): invoices whose earliest billing period is in that year",
+                        "name": "periode_year",
                         "in": "query"
                     },
                     {
@@ -1996,7 +1996,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid year",
+                        "description": "Invalid periode_year",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
