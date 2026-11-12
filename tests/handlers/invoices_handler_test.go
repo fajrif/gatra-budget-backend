@@ -252,20 +252,20 @@ func TestGetAllInvoices(t *testing.T) {
 }
 
 func TestGetAllInvoicesGroupAndYearFilters(t *testing.T) {
-	t.Run("project_group_id and year are applied to both queries", func(t *testing.T) {
+	t.Run("project_group_id and periode_year are applied to both queries", func(t *testing.T) {
 		mock := testutil.SetupMockDB(t)
 		app := setupApp()
 		app.Get("/invoices", handlers.GetAllInvoices)
 		groupID := uuid.New().String()
 
-		mock.ExpectQuery(`SELECT \* FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND to_char\(tgl_tagihan, 'YYYY'\) = \$2`).
+		mock.ExpectQuery(`SELECT \* FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND substr\(periode_tagihan\[1\], 1, 4\) = \$2`).
 			WithArgs(groupID, "2026").
 			WillReturnRows(sqlmock.NewRows([]string{"id", "no_invoice"}).AddRow(uuid.New(), "INV-001"))
-		mock.ExpectQuery(`SELECT count\(\*\) FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND to_char\(tgl_tagihan, 'YYYY'\) = \$2`).
+		mock.ExpectQuery(`SELECT count\(\*\) FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND substr\(periode_tagihan\[1\], 1, 4\) = \$2`).
 			WithArgs(groupID, "2026").
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-		resp, _ := app.Test(httptest.NewRequest("GET", "/invoices?project_group_id="+groupID+"&year=2026", nil))
+		resp, _ := app.Test(httptest.NewRequest("GET", "/invoices?project_group_id="+groupID+"&periode_year=2026", nil))
 		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 	})
 
@@ -275,7 +275,7 @@ func TestGetAllInvoicesGroupAndYearFilters(t *testing.T) {
 			app := setupApp()
 			app.Get("/invoices", handlers.GetAllInvoices)
 
-			resp, _ := app.Test(httptest.NewRequest("GET", "/invoices?year="+year, nil))
+			resp, _ := app.Test(httptest.NewRequest("GET", "/invoices?periode_year="+year, nil))
 			assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 		})
 	}

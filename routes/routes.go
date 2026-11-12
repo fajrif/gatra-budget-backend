@@ -164,4 +164,12 @@ func Setup(app *fiber.App) {
 	reports.Get("/projects/:id/summary", handlers.GetProjectSummaryReport)
 	reports.Get("/monthly", handlers.GetMonthlyReport)
 	reports.Get("/operational-summary", handlers.GetOperationalSummaryReport)
+
+	// Forecast Kas worksheets (admin only: they hold the company's balance)
+	forecastSheets := api.Group("/forecast-sheets")
+	forecastSheets.Get("/", handlers.GetAllForecastSheets)
+	forecastSheets.Get("/:id", handlers.GetForecastSheet)
+	forecastSheets.Post("/", handlers.CreateForecastSheet)
+	forecastSheets.Put("/:id", handlers.UpdateForecastSheet)
+	forecastSheets.Delete("/:id", handlers.DeleteForecastSheet)
 }
