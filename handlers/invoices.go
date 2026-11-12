@@ -150,6 +150,7 @@ var yearPattern = regexp.MustCompile(`^\d{4}$`)
 // @Param project_id query string false "Filter by project ID (UUID)"
 // @Param status query string false "Filter by status (Submit, Kliring)"
 // @Param month query string false "Filter by tgl_tagihan month (YYYY-MM)"
+// @Param paid_month query string false "Filter by tgl_bayar month (YYYY-MM); 400 if malformed"
 // @Param metode_pembayaran query string false "Filter by payment method (Kontrak, SPR)"
 // @Param periode query string false "Filter by billing period month (YYYY-MM)"
 // @Param project_group_id query string false "Filter by project group ID (UUID): invoices of every project in the group"
@@ -159,7 +160,7 @@ var yearPattern = regexp.MustCompile(`^\d{4}$`)
 // @Param limit query int false "Items per page (default: 20)"
 // @Param all query bool false "Get all records without pagination"
 // @Success 200 {object} map[string]any "List of invoices with pagination"
-// @Failure 400 {object} map[string]any "Invalid periode_year"
+// @Failure 400 {object} map[string]any "Invalid periode_year or paid_month"
 // @Failure 401 {object} map[string]any "Unauthorized"
 // @Failure 500 {object} map[string]any "Internal server error"
 // @Router /api/invoices [get]
@@ -187,6 +188,14 @@ func GetAllInvoices(c *fiber.Ctx) error {
 	if month := c.Query("month"); month != "" {
 		query = query.Where("to_char(tgl_tagihan, 'YYYY-MM') = ?", month)
 		queryCount = queryCount.Where("to_char(tgl_tagihan, 'YYYY-MM') = ?", month)
+	}
+
+	if paidMonth := c.Query("paid_month"); paidMonth != "" {
+		if !monthQueryPattern.MatchString(paidMonth) {
+			return fiber.NewError(fiber.StatusBadRequest, "paid_month harus berformat YYYY-MM")
+		}
+		query = query.Where("to_char(tgl_bayar, 'YYYY-MM') = ?", paidMonth)
+		queryCount = queryCount.Where("to_char(tgl_bayar, 'YYYY-MM') = ?", paidMonth)
 	}
 
 	if metode := c.Query("metode_pembayaran"); metode != "" {

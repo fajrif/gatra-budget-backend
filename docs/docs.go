@@ -1901,6 +1901,265 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/forecast-sheets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sheets with total_pengeluaran, total_pemasukan (ticked invoices still unpaid) and jumlah_invoice",
+                "tags": [
+                    "ForecastSheets"
+                ],
+                "summary": "Get all forecast sheets (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by nama",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Get all records without pagination",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of forecast sheets with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Saves the whole sheet. Expense dates must fall inside bulan; ticked invoices that are not unpaid are dropped.",
+                "tags": [
+                    "ForecastSheets"
+                ],
+                "summary": "Create a forecast sheet (admin only)",
+                "parameters": [
+                    {
+                        "description": "Forecast sheet",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ForecastSheetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/forecast-sheets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The sheet with its expenses and the IDs of its ticked invoices that are still unpaid",
+                "tags": [
+                    "ForecastSheets"
+                ],
+                "summary": "Get a forecast sheet by ID (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Forecast sheet ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Forecast sheet details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Forecast sheet not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the sheet's fields, expenses and ticked invoices with the request",
+                "tags": [
+                    "ForecastSheets"
+                ],
+                "summary": "Update a forecast sheet (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Forecast sheet ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Forecast sheet",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ForecastSheetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Its expenses and ticked invoices are removed with it",
+                "tags": [
+                    "ForecastSheets"
+                ],
+                "summary": "Delete a forecast sheet (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Forecast sheet ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/invoices": {
             "get": {
                 "security": [
@@ -1936,6 +2195,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by tgl_tagihan month (YYYY-MM)",
                         "name": "month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tgl_bayar month (YYYY-MM); 400 if malformed",
+                        "name": "paid_month",
                         "in": "query"
                     },
                     {
@@ -1996,7 +2261,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid periode_year",
+                        "description": "Invalid periode_year or paid_month",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -5073,6 +5338,46 @@ const docTemplate = `{
             "properties": {
                 "time.Time": {
                     "type": "string"
+                }
+            }
+        },
+        "models.ForecastExpenseRequest": {
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string"
+                },
+                "jumlah": {
+                    "type": "number"
+                },
+                "tanggal": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ForecastSheetRequest": {
+            "type": "object",
+            "properties": {
+                "bulan": {
+                    "type": "string"
+                },
+                "expenses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ForecastExpenseRequest"
+                    }
+                },
+                "invoice_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "saldo": {
+                    "type": "number"
                 }
             }
         },

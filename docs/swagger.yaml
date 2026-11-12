@@ -182,6 +182,32 @@ definitions:
       time.Time:
         type: string
     type: object
+  models.ForecastExpenseRequest:
+    properties:
+      item:
+        type: string
+      jumlah:
+        type: number
+      tanggal:
+        type: string
+    type: object
+  models.ForecastSheetRequest:
+    properties:
+      bulan:
+        type: string
+      expenses:
+        items:
+          $ref: '#/definitions/models.ForecastExpenseRequest'
+        type: array
+      invoice_ids:
+        items:
+          type: string
+        type: array
+      nama:
+        type: string
+      saldo:
+        type: number
+    type: object
   models.Invoice:
     properties:
       created_at:
@@ -1671,6 +1697,180 @@ paths:
       summary: Update a country
       tags:
       - Countries
+  /api/forecast-sheets:
+    get:
+      description: Sheets with total_pengeluaran, total_pemasukan (ticked invoices
+        still unpaid) and jumlah_invoice
+      parameters:
+      - description: Search by nama
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: List of forecast sheets with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all forecast sheets (admin only)
+      tags:
+      - ForecastSheets
+    post:
+      description: Saves the whole sheet. Expense dates must fall inside bulan; ticked
+        invoices that are not unpaid are dropped.
+      parameters:
+      - description: Forecast sheet
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ForecastSheetRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a forecast sheet (admin only)
+      tags:
+      - ForecastSheets
+  /api/forecast-sheets/{id}:
+    delete:
+      description: Its expenses and ticked invoices are removed with it
+      parameters:
+      - description: Forecast sheet ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a forecast sheet (admin only)
+      tags:
+      - ForecastSheets
+    get:
+      description: The sheet with its expenses and the IDs of its ticked invoices
+        that are still unpaid
+      parameters:
+      - description: Forecast sheet ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Forecast sheet details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Forecast sheet not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a forecast sheet by ID (admin only)
+      tags:
+      - ForecastSheets
+    put:
+      description: Replaces the sheet's fields, expenses and ticked invoices with
+        the request
+      parameters:
+      - description: Forecast sheet ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Forecast sheet
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.ForecastSheetRequest'
+      responses:
+        "200":
+          description: Updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a forecast sheet (admin only)
+      tags:
+      - ForecastSheets
   /api/invoices:
     get:
       consumes:
@@ -1689,6 +1889,10 @@ paths:
       - description: Filter by tgl_tagihan month (YYYY-MM)
         in: query
         name: month
+        type: string
+      - description: Filter by tgl_bayar month (YYYY-MM); 400 if malformed
+        in: query
+        name: paid_month
         type: string
       - description: Filter by payment method (Kontrak, SPR)
         in: query
@@ -1733,7 +1937,7 @@ paths:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid periode_year
+          description: Invalid periode_year or paid_month
           schema:
             additionalProperties: true
             type: object
