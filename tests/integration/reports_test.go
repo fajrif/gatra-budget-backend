@@ -123,9 +123,10 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 	}
 
 	bayar := models.Date{Time: mustParseDate(t, "2026-02-20")}
+	received := 500_000_000.0 // paid in full, no deductions
 	for _, inv := range []models.Invoice{
 		{NoInvoice: "INV-R-1", NamaInvoice: "Termin 1", TglTagihan: models.Date{Time: mustParseDate(t, "2026-01-10")},
-			TglBayar: &bayar, Status: models.InvoiceStatusKliring, Nilai: 500_000_000, ManajemenFee: 40_000_000},
+			TglBayar: &bayar, Status: models.InvoiceStatusKliring, Nilai: 500_000_000, NilaiPenerimaan: &received, ManajemenFee: 40_000_000},
 		{NoInvoice: "INV-R-2", NamaInvoice: "Termin 2", TglTagihan: models.Date{Time: mustParseDate(t, "2026-02-10")},
 			Status: models.InvoiceStatusSubmit, Nilai: 300_000_000, ManajemenFee: 20_000_000},
 	} {

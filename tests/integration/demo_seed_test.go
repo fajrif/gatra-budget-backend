@@ -135,6 +135,9 @@ func TestDemoSeederIsIdempotentAndConsistent(t *testing.T) {
 		if inv.Status == models.InvoiceStatusKliring && (inv.TglBayar == nil || inv.TglBayar.Before(inv.TglTagihan.Time)) {
 			t.Errorf("%s: Kliring needs tgl_bayar after tgl_tagihan", inv.NoInvoice)
 		}
+		if inv.Status == models.InvoiceStatusKliring && inv.NilaiPenerimaan == nil {
+			t.Errorf("%s: Kliring needs nilai_penerimaan", inv.NoInvoice)
+		}
 		if inv.Status == models.InvoiceStatusSubmit && inv.TglBayar != nil {
 			t.Errorf("%s: Submit must not have tgl_bayar", inv.NoInvoice)
 		}

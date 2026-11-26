@@ -68,11 +68,8 @@ func TestCreateInvoiceValidation(t *testing.T) {
 		{"missing nama_invoice", map[string]any{"nama_invoice": nil}},
 		{"missing tgl_tagihan", map[string]any{"tgl_tagihan": nil}},
 		{"zero nilai", map[string]any{"nilai": 0.0}},
-		{"unknown status", map[string]any{"status": "Paid"}},
-		{"Kliring without tgl_bayar", map[string]any{"status": "Kliring"}},
-		{"Submit with tgl_bayar", map[string]any{"tgl_bayar": "2026-10-20"}},
-		{"tgl_bayar on the billing date", map[string]any{"status": "Kliring", "tgl_bayar": "2026-10-01"}},
-		{"tgl_bayar before tgl_tagihan", map[string]any{"status": "Kliring", "tgl_bayar": "2026-09-30"}},
+		{"Kliring status is set through /kliring", map[string]any{"status": "Kliring"}},
+		{"tgl_bayar is set through /kliring", map[string]any{"tgl_bayar": "2026-10-20"}},
 		{"missing metode_pembayaran", map[string]any{"metode_pembayaran": nil}},
 		{"unknown metode_pembayaran", map[string]any{"metode_pembayaran": "Cash"}},
 		{"missing periode_tagihan", map[string]any{"periode_tagihan": nil}},
@@ -96,7 +93,7 @@ func TestCreateInvoice(t *testing.T) {
 	app := setupApp()
 	app.Post("/invoices", handlers.CreateInvoice)
 
-	t.Run("creates a Kliring invoice with its payment date", func(t *testing.T) {
+	t.Run("a new invoice always starts as Submit without a payment date", func(t *testing.T) {
 		mock := testutil.SetupMockDB(t)
 		projectID := uuid.New()
 
@@ -114,8 +111,6 @@ func TestCreateInvoice(t *testing.T) {
 
 		req := httptest.NewRequest("POST", "/invoices", invoiceBody(map[string]any{
 			"project_id": projectID.String(),
-			"status":     "Kliring",
-			"tgl_bayar":  "2026-10-20",
 		}))
 		req.Header.Set("Content-Type", "application/json")
 		resp, _ := app.Test(req)
@@ -124,8 +119,9 @@ func TestCreateInvoice(t *testing.T) {
 
 		var created map[string]any
 		json.Unmarshal(respBody, &created)
-		assert.Equal(t, "Kliring", created["status"])
-		assert.Equal(t, "2026-10-20", created["tgl_bayar"])
+		assert.Equal(t, "Submit", created["status"])
+		assert.Nil(t, created["tgl_bayar"])
+		assert.Nil(t, created["nilai_penerimaan"])
 		assert.Equal(t, 5_000_000.0, created["manajemen_fee"])
 	})
 
@@ -238,6 +234,8 @@ func TestGetAllInvoices(t *testing.T) {
 	mock.ExpectQuery(`SELECT \* FROM "invoices"`).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "no_invoice", "tgl_tagihan", "status", "nilai"}).
 			AddRow(uuid.New(), "INV-001", "2026-10-01", "Submit", 100_000_000.0))
+	mock.ExpectQuery(`SELECT \* FROM "invoice_deductions"`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "invoice_id"}))
 	mock.ExpectQuery(`SELECT count\(\*\) FROM "invoices"`).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
@@ -261,6 +259,8 @@ func TestGetAllInvoicesGroupAndYearFilters(t *testing.T) {
 		mock.ExpectQuery(`SELECT \* FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND substr\(periode_tagihan\[1\], 1, 4\) = \$2`).
 			WithArgs(groupID, "2026").
 			WillReturnRows(sqlmock.NewRows([]string{"id", "no_invoice"}).AddRow(uuid.New(), "INV-001"))
+		mock.ExpectQuery(`SELECT \* FROM "invoice_deductions"`).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "invoice_id"}))
 		mock.ExpectQuery(`SELECT count\(\*\) FROM "invoices" WHERE project_id IN \(SELECT id FROM projects WHERE project_group_id = \$1\) AND substr\(periode_tagihan\[1\], 1, 4\) = \$2`).
 			WithArgs(groupID, "2026").
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))

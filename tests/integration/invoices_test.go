@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"strings"
 	"testing"
 
 	"gatra-budget-backend/handlers"
@@ -54,6 +55,20 @@ func TestInvoiceCheckConstraints(t *testing.T) {
 	}{
 		{"Kliring without tgl_bayar", func(i *models.Invoice) { i.Status = models.InvoiceStatusKliring }},
 		{"Submit with tgl_bayar", func(i *models.Invoice) { i.TglBayar = &bayar }},
+		{"Kliring without nilai_penerimaan", func(i *models.Invoice) {
+			i.Status = models.InvoiceStatusKliring
+			i.TglBayar = &bayar
+		}},
+		{"Submit with nilai_penerimaan", func(i *models.Invoice) {
+			paid := i.Nilai
+			i.NilaiPenerimaan = &paid
+		}},
+		{"negative nilai_penerimaan", func(i *models.Invoice) {
+			neg := -1.0
+			i.Status = models.InvoiceStatusKliring
+			i.TglBayar = &bayar
+			i.NilaiPenerimaan = &neg
+		}},
 		{"fee above nilai", func(i *models.Invoice) { i.ManajemenFee = i.Nilai + 1 }},
 		{"unknown status", func(i *models.Invoice) { i.Status = "Paid" }},
 		{"unknown metode", func(i *models.Invoice) { i.MetodePembayaran = "Cash" }},
@@ -93,38 +108,56 @@ func TestInvoiceProjectCascadeDeletesInvoices(t *testing.T) {
 	}
 }
 
-// TestInvoiceCreateAndClearAgainstRealDB runs the real handler through a
-// Submit -> Kliring transition.
+// TestInvoiceCreateAndClearAgainstRealDB runs the real handlers through a
+// Submit -> Kliring transition: the invoice is billed first, then cleared with
+// its received amount and one deduction.
 func TestInvoiceCreateAndClearAgainstRealDB(t *testing.T) {
 	tx := withTx(t)
 	project, _ := newTestProject(t, tx)
+	pph := newDeductionType(t, tx, "PPh Badan")
 
 	a := app()
 	a.Post("/invoices", handlers.CreateInvoice)
 	a.Put("/invoices/:id", handlers.UpdateInvoice)
+	a.Put("/invoices/:id/kliring", handlers.KliringInvoice)
 
-	payload := func(status, bayar string) string {
-		return `{"no_invoice":"INV-H-1","project_id":"` + project.ID.String() + `","nama_invoice":"Termin 1",
-			"tgl_tagihan":"2026-10-01","status":"` + status + `"` + bayar + `,"metode_pembayaran":"Kontrak","periode_tagihan":["2026-09"],"nilai":100000000,"manajemen_fee":5000000}`
-	}
+	create := `{"no_invoice":"INV-H-1","project_id":"` + project.ID.String() + `","nama_invoice":"Termin 1",
+		"tgl_tagihan":"2026-10-01","metode_pembayaran":"Kontrak","periode_tagihan":["2026-09"],"nilai":100000000,"manajemen_fee":5000000}`
 
-	resp := doJSON(t, a, "POST", "/invoices", payload("Submit", ""))
+	resp := doJSON(t, a, "POST", "/invoices", create)
 	if resp.StatusCode != 201 {
 		t.Fatalf("expected 201, got %d: %s", resp.StatusCode, readRawBody(t, resp))
 	}
-	id := readBody(t, resp)["id"].(string)
-
-	resp = doJSON(t, a, "PUT", "/invoices/"+id, payload("Kliring", `,"tgl_bayar":"2026-10-25"`))
-	if resp.StatusCode != 200 {
-		t.Fatalf("expected 200 kliring the invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
+	created := readBody(t, resp)
+	if created["status"] != "Submit" {
+		t.Fatalf("a new invoice must be Submit, got %v", created["status"])
 	}
-	updated := readBody(t, resp)
-	if updated["status"] != "Kliring" || updated["tgl_bayar"] != "2026-10-25" {
-		t.Fatalf("expected Kliring with tgl_bayar, got %v / %v", updated["status"], updated["tgl_bayar"])
+	id := created["id"].(string)
+
+	kliring := `{"tgl_bayar":"2026-10-25","nilai_penerimaan":98000000,
+		"potongan":[{"deduction_type_id":"` + pph.ID.String() + `","jumlah":2000000}]}`
+	resp = doJSON(t, a, "PUT", "/invoices/"+id+"/kliring", kliring)
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 clearing the invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
+	}
+	cleared := readBody(t, resp)
+	if cleared["status"] != "Kliring" || cleared["tgl_bayar"] != "2026-10-25" || cleared["nilai_penerimaan"] != 98_000_000.0 {
+		t.Fatalf("unexpected clearing result: %v", cleared)
+	}
+	deductions := cleared["deductions"].([]any)
+	if len(deductions) != 1 || deductions[0].(map[string]any)["jumlah"] != 2_000_000.0 {
+		t.Fatalf("expected one 2.000.000 deduction, got %v", deductions)
+	}
+
+	// Editing the billed amount of a cleared invoice is refused.
+	changed := strings.Replace(create, `"nilai":100000000`, `"nilai":120000000`, 1)
+	resp = doJSON(t, a, "PUT", "/invoices/"+id, changed)
+	if resp.StatusCode != 400 {
+		t.Fatalf("expected 400 changing nilai of a Kliring invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
 	}
 
 	// Re-using the same number on a different invoice is a 409, not a 500.
-	resp = doJSON(t, a, "POST", "/invoices", payload("Submit", ""))
+	resp = doJSON(t, a, "POST", "/invoices", create)
 	if resp.StatusCode != 409 {
 		t.Fatalf("expected 409 for duplicate no_invoice, got %d: %s", resp.StatusCode, readRawBody(t, resp))
 	}

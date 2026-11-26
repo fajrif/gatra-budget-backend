@@ -11,9 +11,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// ValidateInvoiceRequest validates the invoice request fields. The tgl_bayar
-// rule mirrors the database CHECK: a Kliring (paid) invoice must have a
-// payment date, and a Submit invoice must not.
+// ValidateInvoiceRequest validates the invoice request fields. Clearing fields
+// (status, tgl_bayar, potongan) are not part of the request; see KliringRequest.
 func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 	if req.NoInvoice == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "no_invoice is required")
@@ -30,23 +29,9 @@ func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 	if req.Nilai <= 0 {
 		return fiber.NewError(fiber.StatusBadRequest, "nilai must be greater than 0")
 	}
-	if req.Status != models.InvoiceStatusSubmit && req.Status != models.InvoiceStatusKliring {
-		return fiber.NewError(fiber.StatusBadRequest, "status must be 'Submit' or 'Kliring'")
-	}
 
 	if err := validateInvoicePeriod(req); err != nil {
 		return err
-	}
-
-	hasTglBayar := req.TglBayar != nil && *req.TglBayar != ""
-	if req.Status == models.InvoiceStatusKliring && !hasTglBayar {
-		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar is required when status is Kliring")
-	}
-	if req.Status == models.InvoiceStatusSubmit && hasTglBayar {
-		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar must be empty when status is Submit")
-	}
-	if hasTglBayar && *req.TglBayar <= req.TglTagihan {
-		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar harus setelah tgl_tagihan")
 	}
 
 	if req.ManajemenFee != nil {
@@ -56,6 +41,26 @@ func ValidateInvoiceRequest(req *models.InvoiceRequest) error {
 		if *req.ManajemenFee > req.Nilai {
 			return fiber.NewError(fiber.StatusBadRequest, "manajemen_fee tidak boleh melebihi nilai")
 		}
+	}
+	return nil
+}
+
+// rejectClearingFields refuses status Kliring and a payment date in an invoice
+// body. Clearing goes through PUT /api/invoices/{id}/kliring, which checks the
+// received amount and deductions; silently ignoring these fields would hide that.
+func rejectClearingFields(c *fiber.Ctx) error {
+	var clearing struct {
+		Status   *string `json:"status"`
+		TglBayar *string `json:"tgl_bayar"`
+	}
+	if err := c.BodyParser(&clearing); err != nil {
+		return nil // a malformed body is reported by the main parser
+	}
+	if clearing.Status != nil && *clearing.Status == models.InvoiceStatusKliring {
+		return fiber.NewError(fiber.StatusBadRequest, "status Kliring hanya bisa diisi lewat tombol Kliring")
+	}
+	if clearing.TglBayar != nil && *clearing.TglBayar != "" {
+		return fiber.NewError(fiber.StatusBadRequest, "tgl_bayar hanya bisa diisi lewat tombol Kliring")
 	}
 	return nil
 }
@@ -103,21 +108,18 @@ func ValidateInvoicePeriodInProject(req *models.InvoiceRequest, project *models.
 }
 
 // applyInvoiceRequest copies a validated InvoiceRequest onto an Invoice,
-// parsing the dates. CreatedBy is set by the caller on create only.
+// parsing the dates. It never touches the clearing fields (status, tgl_bayar,
+// nilai_penerimaan, deductions): those belong to the Kliring endpoints.
+// CreatedBy is set by the caller on create only.
 func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error {
 	tglTagihan, err := helpers.ParseDateString(&req.TglTagihan)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid tgl_tagihan: "+err.Error())
 	}
-	tglBayar, err := helpers.ParseDateString(req.TglBayar)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid tgl_bayar: "+err.Error())
-	}
 
 	inv.NoInvoice = req.NoInvoice
 	inv.ProjectID = helpers.ParseUUID(req.ProjectID)
 	inv.NamaInvoice = req.NamaInvoice
-	inv.Status = req.Status
 	inv.MetodePembayaran = req.MetodePembayaran
 	periods := append(models.MonthList{}, req.PeriodeTagihan...)
 	sort.Strings(periods)
@@ -130,11 +132,6 @@ func applyInvoiceRequest(inv *models.Invoice, req *models.InvoiceRequest) error 
 	}
 
 	inv.TglTagihan = models.Date{Time: *tglTagihan}
-	if tglBayar != nil {
-		inv.TglBayar = &models.Date{Time: *tglBayar}
-	} else {
-		inv.TglBayar = nil
-	}
 	return nil
 }
 
@@ -167,7 +164,7 @@ var yearPattern = regexp.MustCompile(`^\d{4}$`)
 func GetAllInvoices(c *fiber.Ctx) error {
 	pagination := helpers.GetPaginationParams(c)
 
-	query := config.DB.Preload("Project").Order("tgl_tagihan DESC, created_at DESC")
+	query := config.DB.Preload("Project").Preload("Deductions.DeductionType").Order("tgl_tagihan DESC, created_at DESC")
 	queryCount := config.DB.Model(&models.Invoice{})
 
 	if c.Query("all") == "true" {
@@ -254,7 +251,7 @@ func GetAllInvoices(c *fiber.Ctx) error {
 // @Router /api/invoices/{id} [get]
 func GetInvoice(c *fiber.Ctx) error {
 	var invoice models.Invoice
-	if err := config.DB.Preload("Project").Where("id = ?", c.Params("id")).First(&invoice).Error; err != nil {
+	if err := config.DB.Preload("Project").Preload("Deductions.DeductionType").Where("id = ?", c.Params("id")).First(&invoice).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Invoice not found"})
 	}
 	return c.JSON(fiber.Map{"invoice": invoice})
@@ -275,6 +272,9 @@ func CreateInvoice(c *fiber.Ctx) error {
 	var req models.InvoiceRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if err := rejectClearingFields(c); err != nil {
+		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
 	if err := ValidateInvoiceRequest(&req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
@@ -297,6 +297,8 @@ func CreateInvoice(c *fiber.Ctx) error {
 	if err := applyInvoiceRequest(&invoice, &req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
+	// A new invoice is always billed first; clearing happens via /kliring.
+	invoice.Status = models.InvoiceStatusSubmit
 	if email, ok := c.Locals("userEmail").(string); ok {
 		invoice.CreatedBy = email
 	}
@@ -329,6 +331,9 @@ func UpdateInvoice(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	}
+	if err := rejectClearingFields(c); err != nil {
+		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
+	}
 	if err := ValidateInvoiceRequest(&req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -346,11 +351,24 @@ func UpdateInvoice(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "no_invoice already exists"})
 	}
 
+	if invoice.Status == models.InvoiceStatusKliring {
+		if req.Nilai != invoice.Nilai {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "nilai tidak bisa diubah saat invoice sudah Kliring; batalkan kliring terlebih dahulu"})
+		}
+		tglTagihan, err := helpers.ParseDateString(&req.TglTagihan)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid tgl_tagihan: " + err.Error()})
+		}
+		if invoice.TglBayar != nil && !invoice.TglBayar.Time.After(*tglTagihan) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "tgl_tagihan harus sebelum tgl_bayar; ubah kliring terlebih dahulu"})
+		}
+	}
+
 	if err := applyInvoiceRequest(&invoice, &req); err != nil {
 		return c.Status(err.(*fiber.Error).Code).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if err := config.DB.Save(&invoice).Error; err != nil {
+	if err := config.DB.Omit("Deductions").Save(&invoice).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update invoice"})
 	}
 	return c.JSON(invoice)

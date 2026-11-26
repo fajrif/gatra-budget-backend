@@ -54,6 +54,7 @@ func runAllSeeders() {
 		{"address_reference", func() error { return seeds.AddressReferenceSeeder(config.DB) }},
 		{"users", func() error { return seeds.UsersSeeder(config.DB) }},
 		{"operational_cost_types", func() error { return seeds.OperationalCostTypesSeeder(config.DB) }},
+		{"deduction_types", func() error { return seeds.DeductionTypesSeeder(config.DB) }},
 	}
 
 	for _, seeder := range seeders {
@@ -74,10 +75,12 @@ func runSpecificSeeder(name string) {
 		err = seeds.UsersSeeder(config.DB)
 	case "operational_cost_types":
 		err = seeds.OperationalCostTypesSeeder(config.DB)
+	case "deduction_types":
+		err = seeds.DeductionTypesSeeder(config.DB)
 	case "demo":
 		err = seeds.DemoSeeder(config.DB)
 	default:
-		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n  - users\n  - operational_cost_types\n  - demo (sample data 2025-2026, not part of 'all')\n  - demo-reset (interactive, removes demo data)\n", name)
+		log.Fatalf("Unknown seeder: %s\n\nAvailable seeders:\n  - address_reference\n  - users\n  - operational_cost_types\n  - deduction_types\n  - demo (sample data 2025-2026, not part of 'all')\n  - demo-reset (interactive, removes demo data)\n", name)
 	}
 
 	if err != nil {

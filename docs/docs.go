@@ -1901,6 +1901,259 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/deduction-types": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "DeductionTypes"
+                ],
+                "summary": "Get all deduction types",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by nama",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default: 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Get all records without pagination",
+                        "name": "all",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of deduction types with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "DeductionTypes"
+                ],
+                "summary": "Create a deduction type (admin only)",
+                "parameters": [
+                    {
+                        "description": "Deduction type details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.DeductionType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.DeductionType"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/deduction-types/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "DeductionTypes"
+                ],
+                "summary": "Get a deduction type by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction type ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deduction type details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Deduction type not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "DeductionTypes"
+                ],
+                "summary": "Update a deduction type (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction type ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.DeductionType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "schema": {
+                            "$ref": "#/definitions/models.DeductionType"
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Name already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Rejected with 409 while invoice deductions still use it",
+                "tags": [
+                    "DeductionTypes"
+                ],
+                "summary": "Delete a deduction type (admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Deduction type ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Still in use",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/forecast-sheets": {
             "get": {
                 "security": [
@@ -2349,7 +2602,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_invoice already exists updates that invoice.",
+                "description": "Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_invoice already exists updates that invoice. A Kliring row clears the invoice (tgl_bayar, nilai_penerimaan; a lower value needs jenis_potongan); a Submit row leaves it unpaid.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2520,6 +2773,123 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Invoice deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/invoices/{id}/kliring": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets status Kliring, tgl_bayar and nilai_penerimaan and replaces the deductions. Rejected unless nilai_penerimaan + SUM(potongan) equals the invoice nilai. Calling it again on a Kliring invoice edits the clearing.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Clear an invoice (mark as paid) with its received amount and deductions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment date, received amount and deductions",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.KliringRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cleared invoice",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid body, or amounts do not balance",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Invoice or deduction type not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Clears tgl_bayar and nilai_penerimaan and deletes the deductions.",
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Cancel the clearing of an invoice (back to Submit)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invoice ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invoice back to Submit",
+                        "schema": {
+                            "$ref": "#/definitions/models.Invoice"
+                        }
+                    },
+                    "400": {
+                        "description": "Invoice is not Kliring",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -5064,6 +5434,37 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "handlers.KliringPotonganRequest": {
+            "type": "object",
+            "properties": {
+                "deduction_type_id": {
+                    "type": "string"
+                },
+                "jumlah": {
+                    "type": "number"
+                },
+                "keterangan": {
+                    "type": "string"
+                }
+            }
+        },
+        "handlers.KliringRequest": {
+            "type": "object",
+            "properties": {
+                "nilai_penerimaan": {
+                    "type": "number"
+                },
+                "potongan": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handlers.KliringPotonganRequest"
+                    }
+                },
+                "tgl_bayar": {
+                    "type": "string"
+                }
+            }
+        },
         "handlers.LoginRequest": {
             "type": "object",
             "properties": {
@@ -5341,6 +5742,26 @@ const docTemplate = `{
                 }
             }
         },
+        "models.DeductionType": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deskripsi": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nama": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ForecastExpenseRequest": {
             "type": "object",
             "properties": {
@@ -5390,6 +5811,12 @@ const docTemplate = `{
                 "created_by": {
                     "type": "string"
                 },
+                "deductions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.InvoiceDeduction"
+                    }
+                },
                 "description": {
                     "type": "string"
                 },
@@ -5407,6 +5834,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nilai": {
+                    "description": "Nilai is the billed amount (Nilai Tagihan). NilaiPenerimaan is the amount\nactually received, set when the invoice is cleared (Kliring). Deductions\nexplain the difference: nilai = nilai_penerimaan + SUM(deductions).",
+                    "type": "number"
+                },
+                "nilai_penerimaan": {
                     "type": "number"
                 },
                 "no_invoice": {
@@ -5432,6 +5863,35 @@ const docTemplate = `{
                 },
                 "tgl_tagihan": {
                     "$ref": "#/definitions/models.Date"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.InvoiceDeduction": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "deduction_type": {
+                    "$ref": "#/definitions/models.DeductionType"
+                },
+                "deduction_type_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_id": {
+                    "type": "string"
+                },
+                "jumlah": {
+                    "type": "number"
+                },
+                "keterangan": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"
@@ -5466,12 +5926,6 @@ const docTemplate = `{
                     }
                 },
                 "project_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "tgl_bayar": {
                     "type": "string"
                 },
                 "tgl_tagihan": {

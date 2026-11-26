@@ -9,6 +9,7 @@ import (
 	"gatra-budget-backend/models"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +26,8 @@ type InvoiceImportRow struct {
 	MetodePembayaran string `json:"metode_pembayaran"`
 	PeriodeTagihan   string `json:"periode_tagihan"`
 	Nilai            string `json:"nilai"`
+	NilaiPenerimaan  string `json:"nilai_penerimaan"`
+	JenisPotongan    string `json:"jenis_potongan"`
 	ManajemenFee     string `json:"manajemen_fee"`
 	Description      string `json:"description"`
 }
@@ -60,9 +63,50 @@ func splitPeriods(s string) []string {
 	})
 }
 
+// buildImportKliring turns a Kliring row into a validated plan. The row's
+// nilai_penerimaan defaults to nilai (nothing deducted). A lower value needs
+// jenis_potongan, the master deduction type that takes the whole gap as one row.
+// Several deductions per invoice are entered through the Kliring dialog instead.
+func buildImportKliring(r *InvoiceImportRow, req *models.InvoiceRequest, typeByName map[string]uuid.UUID) (*kliringPlan, error) {
+	tglTagihan, err := helpers.ParseDateString(&req.TglTagihan)
+	if err != nil {
+		return nil, fiber.NewError(fiber.StatusBadRequest, "tgl_tagihan tidak valid")
+	}
+	penerimaan := req.Nilai
+	if r.NilaiPenerimaan != "" {
+		v, ok := helpers.ParseImportAmount(r.NilaiPenerimaan)
+		if !ok {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "nilai_penerimaan harus berupa angka")
+		}
+		penerimaan = v
+	}
+
+	var potongan []KliringPotonganRequest
+	gap := centsOf(req.Nilai) - centsOf(penerimaan)
+	switch {
+	case gap > 0:
+		if r.JenisPotongan == "" {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "jenis_potongan wajib diisi bila nilai_penerimaan lebih kecil dari nilai")
+		}
+		typeID, ok := typeByName[helpers.NormalizeKey(r.JenisPotongan)]
+		if !ok {
+			return nil, fiber.NewError(fiber.StatusBadRequest, "jenis_potongan '"+r.JenisPotongan+"' tidak ditemukan di master potongan")
+		}
+		potongan = []KliringPotonganRequest{{DeductionTypeID: typeID.String(), Jumlah: float64(gap) / 100}}
+	case r.JenisPotongan != "":
+		return nil, fiber.NewError(fiber.StatusBadRequest, "jenis_potongan hanya diisi bila nilai_penerimaan lebih kecil dari nilai")
+	}
+
+	return planKliring(req.Nilai, tglTagihan.UTC(), &KliringRequest{
+		TglBayar:        r.TglBayar,
+		NilaiPenerimaan: penerimaan,
+		Potongan:        potongan,
+	})
+}
+
 // ImportInvoices godoc
 // @Summary Import invoices from Excel rows
-// @Description Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_invoice already exists updates that invoice.
+// @Description Validates every row first; if any row is invalid nothing is saved and all errors are returned (422). A row whose no_invoice already exists updates that invoice. A Kliring row clears the invoice (tgl_bayar, nilai_penerimaan; a lower value needs jenis_potongan); a Submit row leaves it unpaid.
 // @Tags Invoices
 // @Accept json
 // @Produce json
@@ -83,6 +127,15 @@ func ImportInvoices(c *fiber.Ctx) error {
 		return respondImportError(c, err)
 	}
 
+	var deductionTypes []models.DeductionType
+	if err := config.DB.Find(&deductionTypes).Error; err != nil {
+		return respondImportError(c, err)
+	}
+	typeByName := make(map[string]uuid.UUID, len(deductionTypes))
+	for _, t := range deductionTypes {
+		typeByName[helpers.NormalizeKey(t.Nama)] = t.ID
+	}
+
 	var existingList []models.Invoice
 	if err := config.DB.Find(&existingList).Error; err != nil {
 		return respondImportError(c, err)
@@ -95,6 +148,7 @@ func ImportInvoices(c *fiber.Ctx) error {
 	errs := &importErrors{}
 	seen := make(map[string]int, len(rows))
 	requests := make([]*models.InvoiceRequest, len(rows))
+	plans := make([]*kliringPlan, len(rows))
 
 	for i := range rows {
 		r := &rows[i]
@@ -107,6 +161,8 @@ func ImportInvoices(c *fiber.Ctx) error {
 		r.MetodePembayaran = canonicalPaymentMethod(strings.TrimSpace(r.MetodePembayaran))
 		r.PeriodeTagihan = strings.TrimSpace(r.PeriodeTagihan)
 		r.Nilai = strings.TrimSpace(r.Nilai)
+		r.NilaiPenerimaan = strings.TrimSpace(r.NilaiPenerimaan)
+		r.JenisPotongan = strings.TrimSpace(r.JenisPotongan)
 		r.ManajemenFee = strings.TrimSpace(r.ManajemenFee)
 
 		before := len(errs.list)
@@ -122,6 +178,22 @@ func ImportInvoices(c *fiber.Ctx) error {
 			importField{"nilai", r.Nilai},
 		)
 
+		switch r.Status {
+		case models.InvoiceStatusSubmit:
+			if r.TglBayar != "" {
+				errs.add(r.Row, "tgl_bayar", "harus kosong bila status Submit")
+			}
+			if r.NilaiPenerimaan != "" || r.JenisPotongan != "" {
+				errs.add(r.Row, "nilai_penerimaan", "hanya diisi bila status Kliring")
+			}
+		case models.InvoiceStatusKliring:
+			// tgl_bayar, nilai_penerimaan and potongan are checked when the plan is built below.
+		default:
+			if r.Status != "" {
+				errs.add(r.Row, "status", "harus Submit atau Kliring")
+			}
+		}
+
 		if r.NoInvoice != "" {
 			if first, dup := seen[r.NoInvoice]; dup {
 				errs.add(r.Row, "no_invoice", "duplikat dengan baris "+strconv.Itoa(first)+" di file yang sama")
@@ -134,8 +206,6 @@ func ImportInvoices(c *fiber.Ctx) error {
 			NoInvoice:        r.NoInvoice,
 			NamaInvoice:      r.NamaInvoice,
 			TglTagihan:       r.TglTagihan,
-			TglBayar:         optionalString(r.TglBayar),
-			Status:           r.Status,
 			MetodePembayaran: r.MetodePembayaran,
 			PeriodeTagihan:   splitPeriods(r.PeriodeTagihan),
 			Description:      optionalString(strings.TrimSpace(r.Description)),
@@ -181,6 +251,14 @@ func ImportInvoices(c *fiber.Ctx) error {
 				errs.addValidation(r.Row, err)
 			}
 		}
+		if len(errs.list) == before && r.Status == models.InvoiceStatusKliring {
+			plan, err := buildImportKliring(r, req, typeByName)
+			if err != nil {
+				errs.addValidation(r.Row, err)
+			} else {
+				plans[i] = plan
+			}
+		}
 		requests[i] = req
 	}
 
@@ -191,7 +269,7 @@ func ImportInvoices(c *fiber.Ctx) error {
 	createdBy, _ := c.Locals("userEmail").(string)
 	created, updated := 0, 0
 	err = config.DB.Transaction(func(tx *gorm.DB) error {
-		for _, req := range requests {
+		for i, req := range requests {
 			invoice, isUpdate := existing[req.NoInvoice]
 			if !isUpdate {
 				invoice = &models.Invoice{CreatedBy: createdBy}
@@ -199,12 +277,33 @@ func ImportInvoices(c *fiber.Ctx) error {
 			if err := applyInvoiceRequest(invoice, req); err != nil {
 				return err
 			}
+
+			// The clearing fields follow the row: Kliring sets them, Submit resets them.
+			plan := plans[i]
+			if plan != nil {
+				paid := plan.NilaiPenerimaan
+				invoice.Status = models.InvoiceStatusKliring
+				invoice.TglBayar = &models.Date{Time: plan.TglBayar}
+				invoice.NilaiPenerimaan = &paid
+			} else {
+				invoice.Status = models.InvoiceStatusSubmit
+				invoice.TglBayar = nil
+				invoice.NilaiPenerimaan = nil
+			}
+
 			if isUpdate {
 				updated++
 			} else {
 				created++
 			}
-			if err := tx.Save(invoice).Error; err != nil {
+			if err := tx.Omit("Deductions").Save(invoice).Error; err != nil {
+				return err
+			}
+			var potongan []kliringPotongan
+			if plan != nil {
+				potongan = plan.Potongan
+			}
+			if err := replaceInvoiceDeductions(tx, invoice.ID, potongan); err != nil {
 				return err
 			}
 		}

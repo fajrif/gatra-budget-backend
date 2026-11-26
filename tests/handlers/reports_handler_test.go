@@ -153,7 +153,7 @@ func TestGetMonthlyReport(t *testing.T) {
 		}
 
 		// Queries run in order: project expenses, operational expenses, billed,
-		// received, received fee.
+		// received, deductions (nilai - nilai_penerimaan), received fee.
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "transactions"`)).
 			WillReturnRows(monthRows([]driver.Value{"2026-01", 400_000_000.0}, []driver.Value{"2026-02", 450_000_000.0}))
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "cost_operations"`)).
@@ -162,6 +162,8 @@ func TestGetMonthlyReport(t *testing.T) {
 			WillReturnRows(monthRows([]driver.Value{"2026-01", 600_000_000.0}))
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).
 			WillReturnRows(monthRows([]driver.Value{"2026-02", 500_000_000.0}))
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).
+			WillReturnRows(monthRows([]driver.Value{"2026-02", 25_000_000.0}))
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).
 			WillReturnRows(monthRows([]driver.Value{"2026-02", 50_000_000.0}))
 
@@ -185,6 +187,7 @@ func TestGetMonthlyReport(t *testing.T) {
 
 		feb := rows[1].(map[string]any)
 		assert.Equal(t, 500_000_000.0, feb["penerimaan"])
+		assert.Equal(t, 25_000_000.0, feb["potongan"])
 		assert.Equal(t, 50_000_000.0, feb["manajemen_fee"])
 		assert.Equal(t, 50_000_000.0, feb["selisih"])
 
@@ -194,6 +197,7 @@ func TestGetMonthlyReport(t *testing.T) {
 		assert.Equal(t, 850_000_000.0, totals["pengeluaran"])
 		assert.Equal(t, 600_000_000.0, totals["tagihan"])
 		assert.Equal(t, 500_000_000.0, totals["penerimaan"])
+		assert.Equal(t, 25_000_000.0, totals["potongan"])
 		assert.Equal(t, 50_000_000.0, totals["manajemen_fee"])
 		assert.Equal(t, 25_000_000.0, totals["operasional"])
 		assert.Equal(t, 875_000_000.0, totals["total_pengeluaran"])
@@ -208,6 +212,8 @@ func TestGetMonthlyReport(t *testing.T) {
 		empty := func() *sqlmock.Rows { return sqlmock.NewRows([]string{"month", "total"}) }
 		// No cost_operations query is expected: the mock fails on any extra query.
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "transactions"`)).WillReturnRows(empty())
+		// billed, received, deductions, received fee
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())
 		mock.ExpectQuery(regexp.QuoteMeta(`FROM "invoices"`)).WillReturnRows(empty())

@@ -394,6 +394,10 @@ func demoSeedCostOperations(tx *gorm.DB) error {
 }
 
 func demoSeedInvoices(tx *gorm.DB) error {
+	// Deduction rows reference the master types, so they must exist first.
+	if err := DeductionTypesSeeder(tx); err != nil {
+		return err
+	}
 	var rows []models.Invoice
 	for _, p := range demoProjects {
 		last := p.lastMonthIndex()
@@ -425,7 +429,24 @@ func demoSeedInvoices(tx *gorm.DB) error {
 				p.monthly, billed, "Tagihan "+p.judul+" periode "+periodLabel(p.month(i))))
 		}
 	}
-	return upsertBatch(tx, rows, "invoices")
+	if err := upsertBatch(tx, rows, "invoices"); err != nil {
+		return err
+	}
+
+	var deductions []models.InvoiceDeduction
+	for _, inv := range rows {
+		if inv.NilaiPenerimaan == nil || *inv.NilaiPenerimaan >= inv.Nilai {
+			continue
+		}
+		deductions = append(deductions, models.InvoiceDeduction{
+			ID:              demoID("ded", inv.NoInvoice),
+			InvoiceID:       inv.ID,
+			DeductionTypeID: id("50000000-0000-4000-8000-000000000001"), // PPh Badan
+			Jumlah:          inv.Nilai - *inv.NilaiPenerimaan,
+			Keterangan:      strPtr("PPh Badan dipotong klien"),
+		})
+	}
+	return upsertBatch(tx, deductions, "invoice deductions")
 }
 
 func periodLabel(m time.Time) string { return fmt.Sprintf("%s %d", bulanID[m.Month()], m.Year()) }
@@ -450,6 +471,13 @@ func demoInvoice(p demoProject, seq string, periods models.MonthList, nilai floa
 	if !paid.After(demoNow) {
 		inv.Status = models.InvoiceStatusKliring
 		inv.TglBayar = &models.Date{Time: paid}
+		// Every third demo invoice is paid net of PPh Badan (2%), so the
+		// Kliring dialog and the potongan reports have real data.
+		received := nilai
+		if billed.Month()%3 == 0 {
+			received = nilai - roundK(nilai*0.02)
+		}
+		inv.NilaiPenerimaan = &received
 	}
 	return inv
 }

@@ -32,12 +32,17 @@ type Invoice struct {
 	// invoice bills for, which can differ from tgl_tagihan / tgl_bayar.
 	MetodePembayaran string    `gorm:"not null;default:'Kontrak'" json:"metode_pembayaran"`
 	PeriodeTagihan   MonthList `gorm:"type:varchar(7)[];not null" json:"periode_tagihan"`
-	Nilai            float64   `gorm:"type:numeric(20,2);not null" json:"nilai"`
-	Description      *string   `json:"description,omitempty"`
-	ManajemenFee     float64   `gorm:"type:numeric(20,2);not null;default:0" json:"manajemen_fee"`
-	CreatedBy        string    `json:"created_by"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	// Nilai is the billed amount (Nilai Tagihan). NilaiPenerimaan is the amount
+	// actually received, set when the invoice is cleared (Kliring). Deductions
+	// explain the difference: nilai = nilai_penerimaan + SUM(deductions).
+	Nilai           float64            `gorm:"type:numeric(20,2);not null" json:"nilai"`
+	NilaiPenerimaan *float64           `gorm:"type:numeric(20,2)" json:"nilai_penerimaan"`
+	Deductions      []InvoiceDeduction `gorm:"foreignKey:InvoiceID" json:"deductions,omitempty"`
+	Description     *string            `json:"description,omitempty"`
+	ManajemenFee    float64            `gorm:"type:numeric(20,2);not null;default:0" json:"manajemen_fee"`
+	CreatedBy       string             `json:"created_by"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
 }
 
 func (Invoice) TableName() string {
@@ -45,14 +50,14 @@ func (Invoice) TableName() string {
 }
 
 // InvoiceRequest is the client-bindable subset of Invoice. It excludes
-// CreatedBy, which is set from the authenticated user.
+// CreatedBy, which is set from the authenticated user, and the clearing fields
+// (status, tgl_bayar, nilai_penerimaan, deductions), which only the Kliring
+// endpoints change. A new invoice always starts as Submit.
 type InvoiceRequest struct {
 	NoInvoice        string   `json:"no_invoice"`
 	ProjectID        string   `json:"project_id"`
 	NamaInvoice      string   `json:"nama_invoice"`
 	TglTagihan       string   `json:"tgl_tagihan"`
-	TglBayar         *string  `json:"tgl_bayar"`
-	Status           string   `json:"status"`
 	MetodePembayaran string   `json:"metode_pembayaran"`
 	PeriodeTagihan   []string `json:"periode_tagihan"`
 	Nilai            float64  `json:"nilai"`

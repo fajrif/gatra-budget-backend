@@ -31,7 +31,9 @@ type ProjectSummary struct {
 	AbsorptionPct     float64   `json:"absorption_pct"`
 	AbsorptionAlert   bool      `json:"absorption_alert"`
 	TotalInvoice      float64   `json:"total_invoice"`
-	TotalKliring      float64   `json:"total_kliring"`
+	TotalKliring      float64   `json:"total_kliring"`    // billed amount (nilai) of Kliring invoices
+	TotalPenerimaan   float64   `json:"total_penerimaan"` // amount actually received for Kliring invoices
+	TotalPotongan     float64   `json:"total_potongan"`   // total_kliring - total_penerimaan
 	TotalOutstanding  float64   `json:"total_outstanding"`
 	TotalManajemenFee float64   `json:"total_manajemen_fee"`
 	ProfitMargin      float64   `json:"profit_margin"`
@@ -44,7 +46,8 @@ type MonthlyReportRow struct {
 	Operasional      float64 `json:"operasional"`       // operational expenses (cost_operations)
 	TotalPengeluaran float64 `json:"total_pengeluaran"` // pengeluaran + operasional
 	Tagihan          float64 `json:"tagihan"`
-	Penerimaan       float64 `json:"penerimaan"`
+	Penerimaan       float64 `json:"penerimaan"` // amount received (nilai_penerimaan)
+	Potongan         float64 `json:"potongan"`   // deductions taken at Kliring: nilai - nilai_penerimaan
 	ManajemenFee     float64 `json:"manajemen_fee"`
 	Selisih          float64 `json:"selisih"` // penerimaan - total_pengeluaran
 }
@@ -56,6 +59,7 @@ type MonthlyReportTotals struct {
 	TotalPengeluaran float64 `json:"total_pengeluaran"`
 	Tagihan          float64 `json:"tagihan"`
 	Penerimaan       float64 `json:"penerimaan"`
+	Potongan         float64 `json:"potongan"`
 	ManajemenFee     float64 `json:"manajemen_fee"`
 	Selisih          float64 `json:"selisih"`
 }
@@ -71,6 +75,7 @@ type invoiceTotal struct {
 	ProjectID        uuid.UUID
 	TotalInvoice     float64
 	TotalKliring     float64
+	TotalPenerimaan  float64
 	TotalOutstanding float64
 	TotalFee         float64
 }
@@ -119,6 +124,7 @@ func projectInvoiceTotals(db *gorm.DB, projectIDs []uuid.UUID) (map[uuid.UUID]in
 		Select(`project_id,
 			COALESCE(SUM(nilai), 0) AS total_invoice,
 			COALESCE(SUM(nilai) FILTER (WHERE status = 'Kliring'), 0) AS total_kliring,
+			COALESCE(SUM(nilai_penerimaan) FILTER (WHERE status = 'Kliring'), 0) AS total_penerimaan,
 			COALESCE(SUM(nilai) FILTER (WHERE status = 'Submit'), 0) AS total_outstanding,
 			COALESCE(SUM(manajemen_fee), 0) AS total_fee`).
 		Where("project_id IN ?", projectIDs).
@@ -151,6 +157,8 @@ func buildProjectSummary(p models.Project, totalRealisasi float64, inv invoiceTo
 		AbsorptionAlert:   absorptionAlert,
 		TotalInvoice:      inv.TotalInvoice,
 		TotalKliring:      inv.TotalKliring,
+		TotalPenerimaan:   inv.TotalPenerimaan,
+		TotalPotongan:     inv.TotalKliring - inv.TotalPenerimaan,
 		TotalOutstanding:  inv.TotalOutstanding,
 		TotalManajemenFee: inv.TotalFee,
 		ProfitMargin:      inv.TotalFee,
@@ -321,7 +329,16 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 	}
 
 	penerimaan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
-		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai), 0) AS total").
+		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai_penerimaan), 0) AS total").
+		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
+		Group("to_char(tgl_bayar, 'YYYY-MM')"))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
+	}
+
+	// Deductions taken at Kliring: the billed amount that was not received.
+	potongan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
+		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai - nilai_penerimaan), 0) AS total").
 		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
 		Group("to_char(tgl_bayar, 'YYYY-MM')"))
 	if err != nil {
@@ -348,6 +365,7 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 			TotalPengeluaran: total,
 			Tagihan:          tagihan[key],
 			Penerimaan:       penerimaan[key],
+			Potongan:         potongan[key],
 			ManajemenFee:     fee[key],
 			Selisih:          penerimaan[key] - total,
 		}
@@ -358,6 +376,7 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 		totals.TotalPengeluaran += row.TotalPengeluaran
 		totals.Tagihan += row.Tagihan
 		totals.Penerimaan += row.Penerimaan
+		totals.Potongan += row.Potongan
 		totals.ManajemenFee += row.ManajemenFee
 		totals.Selisih += row.Selisih
 	}

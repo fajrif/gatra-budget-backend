@@ -40,6 +40,8 @@ func TestForecastSheetLifecycle(t *testing.T) {
 	inv3.Status = models.InvoiceStatusKliring
 	paid := inv3.TglTagihan
 	inv3.TglBayar = &paid
+	received3 := inv3.Nilai
+	inv3.NilaiPenerimaan = &received3
 	for _, inv := range []*models.Invoice{&inv1, &inv2, &inv3} {
 		if err := tx.Create(inv).Error; err != nil {
 			t.Fatalf("create invoice: %v", err)
@@ -103,7 +105,7 @@ func TestForecastSheetLifecycle(t *testing.T) {
 	}
 
 	// A ticked invoice that is paid afterwards disappears from the sheet and totals.
-	tx.Model(&models.Invoice{}).Where("id = ?", inv2.ID).Updates(map[string]any{"status": models.InvoiceStatusKliring, "tgl_bayar": "2026-10-20"})
+	tx.Model(&models.Invoice{}).Where("id = ?", inv2.ID).Updates(map[string]any{"status": models.InvoiceStatusKliring, "tgl_bayar": "2026-10-20", "nilai_penerimaan": 250_000_000.0})
 	sheet = sheetFrom(t, doJSON(t, a, "GET", "/forecast-sheets/"+id, ""), http.StatusOK)
 	if len(sheet["invoice_ids"].([]any)) != 0 {
 		t.Fatalf("a paid invoice must not stay ticked: %v", sheet["invoice_ids"])
@@ -169,10 +171,14 @@ func TestInvoiceListPaidMonthFilter(t *testing.T) {
 	paidOct.Status = models.InvoiceStatusKliring
 	d1 := models.Date{Time: mustParseDate(t, "2026-10-20")}
 	paidOct.TglBayar = &d1
+	receivedOct := paidOct.Nilai
+	paidOct.NilaiPenerimaan = &receivedOct
 	paidNov := newInvoice(t, project.ID, "PM-NOV")
 	paidNov.Status = models.InvoiceStatusKliring
 	d2 := models.Date{Time: mustParseDate(t, "2026-11-03")}
 	paidNov.TglBayar = &d2
+	receivedNov := paidNov.Nilai
+	paidNov.NilaiPenerimaan = &receivedNov
 	unpaid := newInvoice(t, project.ID, "PM-UNPAID")
 	for _, inv := range []*models.Invoice{&paidOct, &paidNov, &unpaid} {
 		if err := tx.Create(inv).Error; err != nil {

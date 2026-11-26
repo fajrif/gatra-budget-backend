@@ -1,5 +1,25 @@
 basePath: /
 definitions:
+  handlers.KliringPotonganRequest:
+    properties:
+      deduction_type_id:
+        type: string
+      jumlah:
+        type: number
+      keterangan:
+        type: string
+    type: object
+  handlers.KliringRequest:
+    properties:
+      nilai_penerimaan:
+        type: number
+      potongan:
+        items:
+          $ref: '#/definitions/handlers.KliringPotonganRequest'
+        type: array
+      tgl_bayar:
+        type: string
+    type: object
   handlers.LoginRequest:
     properties:
       email:
@@ -182,6 +202,19 @@ definitions:
       time.Time:
         type: string
     type: object
+  models.DeductionType:
+    properties:
+      created_at:
+        type: string
+      deskripsi:
+        type: string
+      id:
+        type: string
+      nama:
+        type: string
+      updated_at:
+        type: string
+    type: object
   models.ForecastExpenseRequest:
     properties:
       item:
@@ -214,6 +247,10 @@ definitions:
         type: string
       created_by:
         type: string
+      deductions:
+        items:
+          $ref: '#/definitions/models.InvoiceDeduction'
+        type: array
       description:
         type: string
       id:
@@ -228,6 +265,12 @@ definitions:
       nama_invoice:
         type: string
       nilai:
+        description: |-
+          Nilai is the billed amount (Nilai Tagihan). NilaiPenerimaan is the amount
+          actually received, set when the invoice is cleared (Kliring). Deductions
+          explain the difference: nilai = nilai_penerimaan + SUM(deductions).
+        type: number
+      nilai_penerimaan:
         type: number
       no_invoice:
         type: string
@@ -245,6 +288,25 @@ definitions:
         $ref: '#/definitions/models.Date'
       tgl_tagihan:
         $ref: '#/definitions/models.Date'
+      updated_at:
+        type: string
+    type: object
+  models.InvoiceDeduction:
+    properties:
+      created_at:
+        type: string
+      deduction_type:
+        $ref: '#/definitions/models.DeductionType'
+      deduction_type_id:
+        type: string
+      id:
+        type: string
+      invoice_id:
+        type: string
+      jumlah:
+        type: number
+      keterangan:
+        type: string
       updated_at:
         type: string
     type: object
@@ -267,10 +329,6 @@ definitions:
           type: string
         type: array
       project_id:
-        type: string
-      status:
-        type: string
-      tgl_bayar:
         type: string
       tgl_tagihan:
         type: string
@@ -1697,6 +1755,170 @@ paths:
       summary: Update a country
       tags:
       - Countries
+  /api/deduction-types:
+    get:
+      parameters:
+      - description: Search by nama
+        in: query
+        name: search
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20)'
+        in: query
+        name: limit
+        type: integer
+      - description: Get all records without pagination
+        in: query
+        name: all
+        type: boolean
+      responses:
+        "200":
+          description: List of deduction types with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all deduction types
+      tags:
+      - DeductionTypes
+    post:
+      parameters:
+      - description: Deduction type details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.DeductionType'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.DeductionType'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a deduction type (admin only)
+      tags:
+      - DeductionTypes
+  /api/deduction-types/{id}:
+    delete:
+      description: Rejected with 409 while invoice deductions still use it
+      parameters:
+      - description: Deduction type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Still in use
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a deduction type (admin only)
+      tags:
+      - DeductionTypes
+    get:
+      parameters:
+      - description: Deduction type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Deduction type details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Deduction type not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a deduction type by ID
+      tags:
+      - DeductionTypes
+    put:
+      parameters:
+      - description: Deduction type ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.DeductionType'
+      responses:
+        "200":
+          description: Updated
+          schema:
+            $ref: '#/definitions/models.DeductionType'
+        "404":
+          description: Not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Name already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a deduction type (admin only)
+      tags:
+      - DeductionTypes
   /api/forecast-sheets:
     get:
       description: Sheets with total_pengeluaran, total_pemasukan (ticked invoices
@@ -2089,13 +2311,93 @@ paths:
       summary: Update an invoice
       tags:
       - Invoices
+  /api/invoices/{id}/kliring:
+    delete:
+      description: Clears tgl_bayar and nilai_penerimaan and deletes the deductions.
+      parameters:
+      - description: Invoice ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: Invoice back to Submit
+          schema:
+            $ref: '#/definitions/models.Invoice'
+        "400":
+          description: Invoice is not Kliring
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invoice not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel the clearing of an invoice (back to Submit)
+      tags:
+      - Invoices
+    put:
+      consumes:
+      - application/json
+      description: Sets status Kliring, tgl_bayar and nilai_penerimaan and replaces
+        the deductions. Rejected unless nilai_penerimaan + SUM(potongan) equals the
+        invoice nilai. Calling it again on a Kliring invoice edits the clearing.
+      parameters:
+      - description: Invoice ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment date, received amount and deductions
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.KliringRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cleared invoice
+          schema:
+            $ref: '#/definitions/models.Invoice'
+        "400":
+          description: Invalid body, or amounts do not balance
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Invoice or deduction type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clear an invoice (mark as paid) with its received amount and deductions
+      tags:
+      - Invoices
   /api/invoices/import:
     post:
       consumes:
       - application/json
       description: Validates every row first; if any row is invalid nothing is saved
         and all errors are returned (422). A row whose no_invoice already exists updates
-        that invoice.
+        that invoice. A Kliring row clears the invoice (tgl_bayar, nilai_penerimaan;
+        a lower value needs jenis_potongan); a Submit row leaves it unpaid.
       parameters:
       - description: 'rows: list of invoice rows (see template)'
         in: body
