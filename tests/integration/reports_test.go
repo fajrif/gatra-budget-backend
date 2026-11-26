@@ -191,6 +191,93 @@ func TestReportTotalsAgainstRealDB(t *testing.T) {
 	})
 }
 
+// TestMonthlyReportPeriodeBasis checks the two bases of the monthly report
+// against real Postgres: kas places an invoice by its billing and payment dates,
+// periode places it in every month of periode_tagihan (an SPR invoice counts in
+// each of its months).
+func TestMonthlyReportPeriodeBasis(t *testing.T) {
+	tx := withTx(t)
+	newTestUser(t, tx, "reports-periode@gatrahitawasana.com", "admin")
+
+	project, _ := newTestProject(t, tx)
+
+	bayar := models.Date{Time: mustParseDate(t, "2026-04-05")}
+	received := 98_000_000.0
+	for _, inv := range []models.Invoice{
+		// Billed in March for January's period, paid in April with a 2jt PPh gap.
+		{NoInvoice: "INV-P-1", NamaInvoice: "Kontrak Jan", TglTagihan: models.Date{Time: mustParseDate(t, "2026-03-10")},
+			PeriodeTagihan: models.MonthList{"2026-01"}, MetodePembayaran: models.PaymentMethodKontrak,
+			TglBayar: &bayar, Status: models.InvoiceStatusKliring, Nilai: 100_000_000, NilaiPenerimaan: &received,
+			ManajemenFee: 10_000_000},
+		// SPR advance billed in March, covering January to March, still Submit.
+		{NoInvoice: "INV-P-2", NamaInvoice: "SPR Q1", TglTagihan: models.Date{Time: mustParseDate(t, "2026-03-10")},
+			PeriodeTagihan: models.MonthList{"2026-01", "2026-02", "2026-03"}, MetodePembayaran: models.PaymentMethodSPR,
+			Status: models.InvoiceStatusSubmit, Nilai: 30_000_000, ManajemenFee: 3_000_000},
+	} {
+		inv.ProjectID = project.ID
+		if err := tx.Create(&inv).Error; err != nil {
+			t.Fatalf("failed to create invoice: %v", err)
+		}
+	}
+
+	a := app()
+	routes.Setup(a)
+	token := loginAndGetToken(t, a, "reports-periode@gatrahitawasana.com")
+
+	rowsOf := func(t *testing.T, path string) []any {
+		t.Helper()
+		resp := authedGet(t, a, path, token)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", resp.StatusCode, readRawBody(t, resp))
+		}
+		return readBody(t, resp)["rows"].([]any)
+	}
+
+	t.Run("kas places billing by tgl_tagihan and receipts by tgl_bayar", func(t *testing.T) {
+		rows := rowsOf(t, "/api/reports/monthly?year=2026&project_id="+project.ID.String())
+
+		jan := rows[0].(map[string]any)
+		assertFloat(t, jan, "tagihan", 0)
+		assertFloat(t, jan, "penerimaan", 0)
+
+		mar := rows[2].(map[string]any)
+		assertFloat(t, mar, "tagihan", 130_000_000) // both invoices billed in March
+
+		apr := rows[3].(map[string]any)
+		assertFloat(t, apr, "penerimaan", 98_000_000)
+		assertFloat(t, apr, "potongan", 2_000_000)
+		assertFloat(t, apr, "manajemen_fee", 10_000_000)
+	})
+
+	t.Run("periode places each invoice in its periode_tagihan months", func(t *testing.T) {
+		rows := rowsOf(t, "/api/reports/monthly?year=2026&basis=periode&project_id="+project.ID.String())
+
+		jan := rows[0].(map[string]any)
+		assertFloat(t, jan, "tagihan", 130_000_000) // Kontrak Jan + full SPR
+		assertFloat(t, jan, "penerimaan", 98_000_000)
+		assertFloat(t, jan, "potongan", 2_000_000)
+		assertFloat(t, jan, "manajemen_fee", 10_000_000)
+
+		feb := rows[1].(map[string]any)
+		assertFloat(t, feb, "tagihan", 30_000_000) // SPR counts again, in full
+		assertFloat(t, feb, "penerimaan", 0)
+
+		mar := rows[2].(map[string]any)
+		assertFloat(t, mar, "tagihan", 30_000_000)
+
+		apr := rows[3].(map[string]any)
+		assertFloat(t, apr, "tagihan", 0)
+		assertFloat(t, apr, "penerimaan", 0) // paid in April, but billed for January
+	})
+
+	t.Run("unknown basis is rejected", func(t *testing.T) {
+		resp := authedGet(t, a, "/api/reports/monthly?year=2026&basis=lain", token)
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d: %s", resp.StatusCode, readRawBody(t, resp))
+		}
+	})
+}
+
 // loginAndGetToken logs in through the real login route for a user created in
 // the test transaction, and returns the signed token.
 func loginAndGetToken(t *testing.T, a *fiber.App, email string) string {

@@ -4350,7 +4350,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.",
+                "description": "Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices, received payments and fees (Kliring invoices), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given. basis=kas (default) places invoices by tgl_tagihan (billed) and tgl_bayar (received). basis=periode places each invoice in every month of its periode_tagihan, so an SPR invoice counts in each month it bills.",
                 "tags": [
                     "Reports"
                 ],
@@ -4360,6 +4360,16 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Year (default: current year)",
                         "name": "year",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "kas",
+                            "periode"
+                        ],
+                        "type": "string",
+                        "description": "kas (default, by tgl_tagihan / tgl_bayar) or periode (by periode_tagihan)",
+                        "name": "basis",
                         "in": "query"
                     },
                     {

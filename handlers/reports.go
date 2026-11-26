@@ -255,6 +255,35 @@ func GetProjectSummaryReport(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"project_summary": buildProjectSummary(project, realisasi[project.ID], invoices[project.ID])})
 }
 
+// Bases of the monthly report's invoice columns.
+const (
+	reportBasisKas     = "kas"
+	reportBasisPeriode = "periode"
+)
+
+// invoiceMonthTotals sums sumExpr per "YYYY-MM" over the invoices of one report
+// basis. kas groups each invoice by dateCol (tgl_tagihan or tgl_bayar). periode
+// counts each invoice in every month of periode_tagihan, so an SPR invoice shows
+// its full value in each month it bills. kliringOnly limits the sum to Kliring.
+func invoiceMonthTotals(basis, projectID, dateCol, sumExpr string, kliringOnly bool, prefix string) (map[string]float64, error) {
+	q := config.DB.Model(&models.Invoice{})
+	monthCol := "to_char(invoices." + dateCol + ", 'YYYY-MM')"
+	if basis == reportBasisPeriode {
+		q = config.DB.Table("invoices").Joins("CROSS JOIN LATERAL unnest(invoices.periode_tagihan) AS pm(month)")
+		monthCol = "pm.month"
+	}
+	if projectID != "" {
+		q = q.Where("invoices.project_id = ?", projectID)
+	}
+	if kliringOnly {
+		q = q.Where("invoices.status = ?", models.InvoiceStatusKliring)
+	}
+	return monthTotals(q.
+		Select(monthCol+" AS month, COALESCE(SUM("+sumExpr+"), 0) AS total").
+		Where(monthCol+" LIKE ?", prefix).
+		Group(monthCol))
+}
+
 // monthTotals runs one grouped query and returns totals keyed by "YYYY-MM".
 func monthTotals(q *gorm.DB) (map[string]float64, error) {
 	var rows []monthTotal
@@ -271,10 +300,11 @@ func monthTotals(q *gorm.DB) (map[string]float64, error) {
 
 // GetMonthlyReport godoc
 // @Summary Get the monthly expense and invoice report (admin only)
-// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices by tgl_bayar), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given.
+// @Description Twelve months of one year: expenses (transactions by bulan_realisasi), billed invoices, received payments and fees (Kliring invoices), and received minus total expenses (project + operational). Operational expenses (cost_operations) are included only when no project_id filter is given. basis=kas (default) places invoices by tgl_tagihan (billed) and tgl_bayar (received). basis=periode places each invoice in every month of its periode_tagihan, so an SPR invoice counts in each month it bills.
 // @Tags Reports
 // @Security BearerAuth
 // @Param year query int false "Year (default: current year)"
+// @Param basis query string false "kas (default, by tgl_tagihan / tgl_bayar) or periode (by periode_tagihan)" Enums(kas, periode)
 // @Param project_id query string false "Limit to one project (UUID)"
 // @Success 200 {object} map[string]any "Rows per month, plus totals"
 // @Failure 400 {object} map[string]any "Invalid year"
@@ -289,6 +319,14 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "year must be between 2000 and 2100"})
 		}
 		year = parsed
+	}
+	basis := reportBasisKas
+	switch b := c.Query("basis"); b {
+	case "", reportBasisKas:
+	case reportBasisPeriode:
+		basis = reportBasisPeriode
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "basis must be kas or periode"})
 	}
 	projectID := c.Query("project_id")
 	prefix := strconv.Itoa(year) + "-%"
@@ -320,35 +358,24 @@ func GetMonthlyReport(c *fiber.Ctx) error {
 		}
 	}
 
-	tagihan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
-		Select("to_char(tgl_tagihan, 'YYYY-MM') AS month, COALESCE(SUM(nilai), 0) AS total").
-		Where("to_char(tgl_tagihan, 'YYYY-MM') LIKE ?", prefix).
-		Group("to_char(tgl_tagihan, 'YYYY-MM')"))
+	// Billed amount: kas places it by tgl_tagihan, periode by each month of periode_tagihan.
+	tagihan, err := invoiceMonthTotals(basis, projectID, "tgl_tagihan", "invoices.nilai", false, prefix)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
 	}
 
-	penerimaan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
-		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai_penerimaan), 0) AS total").
-		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
-		Group("to_char(tgl_bayar, 'YYYY-MM')"))
+	penerimaan, err := invoiceMonthTotals(basis, projectID, "tgl_bayar", "invoices.nilai_penerimaan", true, prefix)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
 	}
 
 	// Deductions taken at Kliring: the billed amount that was not received.
-	potongan, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
-		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(nilai - nilai_penerimaan), 0) AS total").
-		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
-		Group("to_char(tgl_bayar, 'YYYY-MM')"))
+	potongan, err := invoiceMonthTotals(basis, projectID, "tgl_bayar", "invoices.nilai - invoices.nilai_penerimaan", true, prefix)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
 	}
 
-	fee, err := monthTotals(scope(config.DB.Model(&models.Invoice{})).
-		Select("to_char(tgl_bayar, 'YYYY-MM') AS month, COALESCE(SUM(manajemen_fee), 0) AS total").
-		Where("status = ? AND to_char(tgl_bayar, 'YYYY-MM') LIKE ?", models.InvoiceStatusKliring, prefix).
-		Group("to_char(tgl_bayar, 'YYYY-MM')"))
+	fee, err := invoiceMonthTotals(basis, projectID, "tgl_bayar", "invoices.manajemen_fee", true, prefix)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to aggregate invoices"})
 	}

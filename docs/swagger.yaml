@@ -3365,15 +3365,24 @@ paths:
   /api/reports/monthly:
     get:
       description: 'Twelve months of one year: expenses (transactions by bulan_realisasi),
-        billed invoices (by tgl_tagihan), received payments and fees (Kliring invoices
-        by tgl_bayar), and received minus total expenses (project + operational).
-        Operational expenses (cost_operations) are included only when no project_id
-        filter is given.'
+        billed invoices, received payments and fees (Kliring invoices), and received
+        minus total expenses (project + operational). Operational expenses (cost_operations)
+        are included only when no project_id filter is given. basis=kas (default)
+        places invoices by tgl_tagihan (billed) and tgl_bayar (received). basis=periode
+        places each invoice in every month of its periode_tagihan, so an SPR invoice
+        counts in each month it bills.'
       parameters:
       - description: 'Year (default: current year)'
         in: query
         name: year
         type: integer
+      - description: kas (default, by tgl_tagihan / tgl_bayar) or periode (by periode_tagihan)
+        enum:
+        - kas
+        - periode
+        in: query
+        name: basis
+        type: string
       - description: Limit to one project (UUID)
         in: query
         name: project_id

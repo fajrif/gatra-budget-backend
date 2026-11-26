@@ -223,6 +223,34 @@ func TestGetMonthlyReport(t *testing.T) {
 		assert.Equal(t, 0.0, readJSON(t, resp.Body)["totals"].(map[string]any)["operasional"])
 	})
 
+	t.Run("periode basis expands each invoice over its periode_tagihan months", func(t *testing.T) {
+		mock := testutil.SetupMockDB(t)
+		app := setupApp()
+		app.Get("/reports/monthly", handlers.GetMonthlyReport)
+
+		empty := func() *sqlmock.Rows { return sqlmock.NewRows([]string{"month", "total"}) }
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "transactions"`)).WillReturnRows(empty())
+		mock.ExpectQuery(regexp.QuoteMeta(`FROM "cost_operations"`)).WillReturnRows(empty())
+		// billed, received, deductions, received fee: all read the period months.
+		for i := 0; i < 4; i++ {
+			mock.ExpectQuery(regexp.QuoteMeta(`CROSS JOIN LATERAL unnest(invoices.periode_tagihan)`)).
+				WillReturnRows(empty())
+		}
+
+		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/monthly?year=2026&basis=periode", nil))
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+		assert.Len(t, readJSON(t, resp.Body)["rows"].([]any), 12)
+	})
+
+	t.Run("rejects an unknown basis", func(t *testing.T) {
+		testutil.SetupMockDB(t)
+		app := setupApp()
+		app.Get("/reports/monthly", handlers.GetMonthlyReport)
+
+		resp, _ := app.Test(httptest.NewRequest("GET", "/reports/monthly?year=2026&basis=lain", nil))
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+
 	t.Run("rejects an invalid year", func(t *testing.T) {
 		testutil.SetupMockDB(t)
 		app := setupApp()
